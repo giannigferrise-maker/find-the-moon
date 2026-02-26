@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find the Moon</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
+  <style>
+    /* ─── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font: 'Segoe UI', system-ui, sans-serif;
+      --transition: 0.6s ease;
+    }
+
+    /* ─── Themes ────────────────────────────────────────────────── */
+    body.night {
+      --bg-top:    #020818;
+      --bg-mid:    #0a1628;
+      --bg-bot:    #111827;
+      --card-bg:   rgba(255,255,255,0.06);
+      --card-border: rgba(255,255,255,0.12);
+      --text:      #e8f0fe;
+      --text-dim:  #8fa3c8;
+      --accent:    #a78bfa;
+      --accent2:   #60a5fa;
+      --moon-glow: rgba(196,181,253,0.35);
+      --horizon:   #1e293b;
+      --horizon2:  #0f172a;
+    }
+
+    body.day {
+      --bg-top:    #2563eb;
+      --bg-mid:    #60a5fa;
+      --bg-bot:    #bae6fd;
+      --card-bg:   rgba(255,255,255,0.22);
+      --card-border: rgba(255,255,255,0.45);
+      --text:      #0f172a;
+      --text-dim:  #334155;
+      --accent:    #1d4ed8;
+      --accent2:   #7c3aed;
+      --moon-glow: rgba(255,255,255,0.5);
+      --horizon:   #bae6fd;
+      --horizon2:  #7dd3fc;
+    }
+
+    /* ─── Background ────────────────────────────────────────────── */
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      min-height: 100vh;
+      background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-mid) 60%, var(--bg-bot) 100%);
+      transition: background var(--transition), color var(--transition);
+      overflow-x: hidden;
+    }
+
+    /* Stars (night only) */
+    #stars-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    body.night #stars-canvas { opacity: 1; }
+
+    /* Clouds (day only) */
+    .clouds {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 1s ease;
+      overflow: hidden;
+    }
+    body.day .clouds { opacity: 1; }
+    .cloud {
+      position: absolute;
+      background: rgba(255,255,255,0.7);
+      border-radius: 50px;
+      filter: blur(8px);
+      animation: drift linear infinite;
+    }
+    .cloud::before, .cloud::after {
+      content: '';
+      position: absolute;
+      background: inherit;
+      border-radius: 50%;
+    }
+    @keyframes drift { from { transform: translateX(-200px); } to { transform: translateX(110vw); } }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    #app {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    header { text-align: center; }
+    header h1 {
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 18px var(--moon-glow));
+    }
+    header p {
+      margin-top: 0.35rem;
+      font-size: 0.95rem;
+      color: var(--text-dim);
+    }
+
+    /* ─── Card ───────────────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 1.4rem 1.4rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    /* ─── Location Input ─────────────────────────────────────────── */
+    #location-section { display: flex; flex-direction: column; gap: 0.9rem; }
+
+    #gps-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.8rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 4px 20px var(--moon-glow);
+    }
+    #gps-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    #gps-btn:active { transform: translateY(0); }
+
+    .divider {
+      display: flex; align-items: center; gap: 0.75rem;
+      color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+
+    #zip-row { display: flex; gap: 0.6rem; }
+    #zip-input {
+      flex: 1;
+      padding: 0.7rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--card-border);
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #zip-input::placeholder { color: var(--text-dim); }
+    #zip-input:focus { border-color: var(--accent); }
+
+    #zip-btn {
+      padding: 0.7rem 1.1rem;
+      border: none;
+      border-radius: 0.75rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #zip-btn:hover { opacity: 0.85; }
+
+    #location-status {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      text-align: center;
+      min-height: 1.1em;
+    }
+    #location-status.error { color: #f87171; }
+    #location-status.ok   { color: #34d399; }
+
+    /* ─── Moon Results ───────────────────────────────────────────── */
+    #results { display: none; flex-direction: column; gap: 1.4rem; width: 100%; }
+    #results.visible { display: flex; }
+
+    /* Moon Phase Visual */
+    #phase-card { text-align: center; }
+    #phase-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 0.75rem;
+    }
+    #moon-visual-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+    }
+    /* SVG moon rendered by JS */
+    #moon-svg-container svg { filter: drop-shadow(0 0 22px var(--moon-glow)); }
+    #phase-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    #phase-illum {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.2rem;
+    }
+
+    /* Compass */
+    #compass-card { text-align: center; }
+    .section-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 0.9rem;
+    }
+    #compass-wrap {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 0.9rem;
+    }
+    #compass-ring {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--card-border);
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+      position: relative;
+    }
+    .compass-label {
+      position: absolute;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      transform: translate(-50%, -50%);
+    }
+    #cN { top: 8%; left: 50%; }
+    #cS { top: 92%; left: 50%; }
+    #cE { top: 50%; left: 92%; }
+    #cW { top: 50%; left: 8%; }
+
+    #needle-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #needle {
+      width: 6px;
+      height: 70px;
+      position: relative;
+    }
+    #needle::before {
+      content: '🌕';
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.4rem;
+      filter: drop-shadow(0 0 8px var(--moon-glow));
+    }
+    #needle::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      border-radius: 2px;
+    }
+
+    #direction-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    #direction-deg {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.15rem;
+    }
+
+    /* Altitude */
+    #altitude-card { text-align: center; }
+    #alt-arc-wrap { display: flex; justify-content: center; margin-bottom: 0.75rem; }
+    #alt-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    #alt-sub {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.15rem;
+    }
+
+    /* Visibility */
+    #visibility-card { text-align: center; }
+    #vis-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1.1rem;
+      border-radius: 99px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+    }
+    #vis-badge.above { background: rgba(52,211,153,0.18); color: #34d399; border: 1px solid #34d39940; }
+    #vis-badge.below { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid #f8717140; }
+    #vis-detail { font-size: 0.88rem; color: var(--text-dim); line-height: 1.5; }
+
+    /* Location display */
+    #loc-display {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    #loc-display span { color: var(--text); font-weight: 600; }
+
+    /* Update time */
+    #update-time {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--card-border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Live Compass ─────────────────────────────────────────────── */
+    #live-compass-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      width: 100%;
+    }
+    #live-compass-section.visible { display: flex; }
+
+    #compass-toggle-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.6rem 1.1rem;
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    #compass-toggle-btn:hover { background: rgba(255,255,255,0.13); border-color: var(--accent); }
+    #compass-toggle-btn.active { background: rgba(167,139,250,0.15); border-color: var(--accent); color: var(--accent); }
+
+    #live-compass-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    #live-compass-wrap.visible { display: flex; }
+
+    #compass-canvas { border-radius: 50%; }
+
+    #compass-hint {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.5;
+      max-width: 220px;
+    }
+    #compass-perm-note {
+      font-size: 0.75rem;
+      color: #f87171;
+      text-align: center;
+      min-height: 1em;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 400px) {
+      #app { padding: 1.5rem 1rem 2.5rem; }
+      #compass-wrap { width: 150px; height: 150px; }
+    }
+  </style>
+</head>
+<body class="night">
+
+<canvas id="stars-canvas"></canvas>
+<div class="clouds" id="clouds-layer"></div>
+
+<div id="app">
+  <header>
+    <h1>🌙 Find the Moon</h1>
+    <p>Discover where the moon is hiding right now</p>
+  </header>
+
+  <!-- Location Input -->
+  <div class="card" id="location-section">
+    <button id="gps-btn">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        <circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/>
+      </svg>
+      Use My Location (GPS)
+    </button>
+
+    <div class="divider">or enter zip code</div>
+
+    <div id="zip-row">
+      <input id="zip-input" type="tel" maxlength="5" placeholder="e.g. 90210" autocomplete="off" />
+      <button id="zip-btn">Go</button>
+    </div>
+
+    <div id="location-status">Enter your location to find the moon</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Phase -->
+    <div class="card" id="phase-card">
+      <div class="section-label">Moon Phase</div>
+      <div id="moon-visual-wrap">
+        <div id="moon-svg-container"></div>
+      </div>
+      <div id="phase-name">—</div>
+      <div id="phase-illum">—</div>
+    </div>
+
+    <!-- Compass Direction -->
+    <div class="card" id="compass-card">
+      <div class="section-label">Direction to Look</div>
+      <div id="compass-wrap">
+        <div id="compass-ring">
+          <span class="compass-label" id="cN">N</span>
+          <span class="compass-label" id="cS">S</span>
+          <span class="compass-label" id="cE">E</span>
+          <span class="compass-label" id="cW">W</span>
+        </div>
+        <div id="needle-wrap">
+          <div id="needle"></div>
+        </div>
+      </div>
+      <div id="direction-text">—</div>
+      <div id="direction-deg">—</div>
+
+      <!-- Live compass — shown only on devices with a compass sensor -->
+      <div id="live-compass-section">
+        <button id="compass-toggle-btn">🧭 Enable Live Compass</button>
+        <div id="live-compass-wrap">
+          <canvas id="compass-canvas" width="224" height="224"></canvas>
+          <p id="compass-hint">Rotate your phone until 🌙 lines up with the purple arrow — you're now facing the moon!</p>
+        </div>
+        <p id="compass-perm-note"></p>
+      </div>
+    </div>
+
+    <!-- Altitude arc -->
+    <div class="card" id="altitude-card">
+      <div class="section-label">Height in the Sky</div>
+      <div id="alt-arc-wrap">
+        <canvas id="alt-arc" width="200" height="110"></canvas>
+      </div>
+      <div id="alt-text">—</div>
+      <div id="alt-sub">above the horizon</div>
+    </div>
+
+    <!-- Visibility -->
+    <div class="card" id="visibility-card">
+      <div class="section-label">Visibility</div>
+      <div id="vis-badge" class="above">● Visible Now</div>
+      <div id="vis-detail">—</div>
+    </div>
+
+    <div id="loc-display">Showing moon for <span id="loc-name">your location</span></div>
+    <div id="update-time"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   UTILITY
+================================================================ */
+const $ = id => document.getElementById(id);
+
+function radToDeg(r) { return r * (180 / Math.PI); }
+function degToRad(d) { return d * (Math.PI / 180); }
+
+function azimuthToCompass(az) {
+  // SunCalc azimuth: 0 = South, π = North, π/2 = West, -π/2 = East
+  // Convert to 0=North clockwise
+  let deg = radToDeg(az) + 180;
+  deg = ((deg % 360) + 360) % 360;
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const idx = Math.round(deg / 22.5) % 16;
+  return { deg: Math.round(deg), label: dirs[idx] };
+}
+
+function compassToWords(label) {
+  const map = {
+    'N':'North','NNE':'North-Northeast','NE':'Northeast','ENE':'East-Northeast',
+    'E':'East','ESE':'East-Southeast','SE':'Southeast','SSE':'South-Southeast',
+    'S':'South','SSW':'South-Southwest','SW':'Southwest','WSW':'West-Southwest',
+    'W':'West','WNW':'West-Northwest','NW':'Northwest','NNW':'North-Northwest'
+  };
+  return map[label] || label;
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function isNighttime(date, lat, lon) {
+  const sun = SunCalc.getPosition(date, lat, lon);
+  // Sun altitude < -6° = astronomical dusk/dawn or night
+  return radToDeg(sun.altitude) < -6;
+}
+
+/* ================================================================
+   THEME
+================================================================ */
+function applyTheme(isNight) {
+  document.body.classList.toggle('night', isNight);
+  document.body.classList.toggle('day', !isNight);
+  if (isNight) drawStars(); else clearStars();
+  renderClouds(!isNight);
+}
+
+/* ================================================================
+   STARS
+================================================================ */
+const starsCanvas = $('stars-canvas');
+const starsCtx = starsCanvas.getContext('2d');
+let starsDrawn = false;
+
+function drawStars() {
+  if (starsDrawn) return;
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  starsCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+  const count = Math.floor((starsCanvas.width * starsCanvas.height) / 3000);
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * starsCanvas.width;
+    const y = Math.random() * starsCanvas.height * 0.75;
+    const r = Math.random() * 1.4 + 0.3;
+    const alpha = Math.random() * 0.7 + 0.3;
+    starsCtx.beginPath();
+    starsCtx.arc(x, y, r, 0, Math.PI * 2);
+    starsCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+    starsCtx.fill();
+  }
+  starsDrawn = true;
+}
+
+function clearStars() {
+  starsCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+  starsDrawn = false;
+}
+
+window.addEventListener('resize', () => { starsDrawn = false; if (document.body.classList.contains('night')) drawStars(); });
+
+/* ================================================================
+   CLOUDS
+================================================================ */
+function renderClouds(show) {
+  const layer = $('clouds-layer');
+  layer.innerHTML = '';
+  if (!show) return;
+  const cloudData = [
+    { top: '10%', width: 180, height: 50, dur: 60, delay: 0 },
+    { top: '18%', width: 240, height: 65, dur: 90, delay: -20 },
+    { top: '6%',  width: 130, height: 40, dur: 75, delay: -45 },
+    { top: '25%', width: 200, height: 55, dur: 110, delay: -30 },
+  ];
+  cloudData.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'cloud';
+    el.style.cssText = `top:${c.top};width:${c.width}px;height:${c.height}px;animation-duration:${c.dur}s;animation-delay:${c.delay}s`;
+    const b1 = document.createElement('div');
+    b1.style.cssText = `width:${c.width*0.6}px;height:${c.height*1.4}px;top:-50%;left:20%;border-radius:50%;background:rgba(255,255,255,0.7);position:absolute;`;
+    const b2 = document.createElement('div');
+    b2.style.cssText = `width:${c.width*0.45}px;height:${c.height*1.2}px;top:-40%;left:45%;border-radius:50%;background:rgba(255,255,255,0.6);position:absolute;`;
+    el.appendChild(b1); el.appendChild(b2);
+    layer.appendChild(el);
+  });
+}
+
+/* ================================================================
+   MOON SVG PHASE RENDERER
+================================================================ */
+function renderMoonSVG(fraction, angle) {
+  // fraction: 0–1 illumination, angle: phase angle for left/right
+  const size = 110;
+  const r = 48;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  // Determine if waxing (right side lit) or waning (left side lit)
+  const waxing = angle < 0.5; // phase 0–0.5 = waxing
+
+  // The inner ellipse x-radius: goes from -r (new) → 0 (quarter) → +r (full) → 0 → -r
+  // We use illumination fraction to compute the terminator ellipse
+  let ex; // inner ellipse rx
+  if (waxing) {
+    ex = r * (1 - 2 * angle); // 0→r at new, -r at full (crosses 0 at quarter)
+    // Actually re-derive from fraction
+    ex = r * Math.cos(Math.PI * angle);
+  } else {
+    ex = r * Math.cos(Math.PI * angle);
+  }
+
+  // Build SVG path: semi-circle on the lit side + ellipse terminator
+  // Phase 0 = new moon, 0.5 = full moon
+  // We draw the lit limb
+
+  let path;
+  const sweep = waxing ? 1 : 0; // arc sweep direction
+
+  if (fraction < 0.02) {
+    // New moon – dark circle
+    path = `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx} ${cy + r} A ${r} ${r} 0 1 1 ${cx} ${cy - r}`;
+  } else if (fraction > 0.98) {
+    // Full moon
+    path = null;
+  } else {
+    const absEx = Math.abs(ex);
+    const largeArc = 1;
+    // Outer arc (lit side)
+    // top point: (cx, cy - r), bottom point: (cx, cy + r)
+    // outer semi: right side if waxing, left side if waning
+    const outerSweep = waxing ? 1 : 0;
+    const innerSweep = waxing ? 0 : 1;
+    path = `M ${cx} ${cy - r}
+            A ${r} ${r} 0 1 ${outerSweep} ${cx} ${cy + r}
+            A ${absEx} ${r} 0 1 ${innerSweep} ${cx} ${cy - r}
+            Z`;
+  }
+
+  const moonColor = '#f0e6c8';
+  const shadowColor = '#1a1f35';
+  const glowColor = 'rgba(240,230,200,0.25)';
+
+  let svgContent;
+  if (fraction > 0.98) {
+    // Full moon
+    svgContent = `
+      <circle cx="${cx}" cy="${cy}" r="${r+2}" fill="${glowColor}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${moonColor}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#craters)" opacity="0.4"/>
+    `;
+  } else if (fraction < 0.02) {
+    // New moon
+    svgContent = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${shadowColor}"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#craters)" opacity="0.12"/>
+    `;
+  } else {
+    svgContent = `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${shadowColor}"/>
+      <path d="${path}" fill="${moonColor}" opacity="0.95"/>
+      <path d="${path}" fill="url(#craters)" opacity="0.3"/>
+    `;
+  }
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="craters" cx="40%" cy="40%">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.15)"/>
+        <stop offset="100%" stop-color="rgba(0,0,0,0.2)"/>
+      </radialGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <g filter="url(#glow)">
+      ${svgContent}
+    </g>
+  </svg>`;
+}
+
+function getPhaseName(fraction, angle) {
+  // angle is SunCalc phase 0–1
+  const phase = angle;
+  if (phase < 0.03 || phase > 0.97) return 'New Moon';
+  if (phase < 0.22) return 'Waxing Crescent';
+  if (phase < 0.28) return 'First Quarter';
+  if (phase < 0.47) return 'Waxing Gibbous';
+  if (phase < 0.53) return 'Full Moon';
+  if (phase < 0.72) return 'Waning Gibbous';
+  if (phase < 0.78) return 'Last Quarter';
+  if (phase < 0.97) return 'Waning Crescent';
+  return 'New Moon';
+}
+
+/* ================================================================
+   ALTITUDE ARC RENDERER
+================================================================ */
+function drawAltArc(altDeg) {
+  const canvas = $('alt-arc');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H - 10;
+  const radius = 80;
+
+  // Horizon line
+  ctx.beginPath();
+  ctx.moveTo(cx - radius - 20, cy);
+  ctx.lineTo(cx + radius + 20, cy);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Arc background (below)
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, Math.PI, 0, false);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Arc fill (lit portion)
+  const clampedAlt = Math.max(-90, Math.min(90, altDeg));
+  const startAngle = Math.PI; // left = horizon (west)
+  const altFraction = clampedAlt / 90; // 0 at horizon, 1 at zenith
+
+  // Draw arc from left horizon to current altitude
+  const endAngle = Math.PI - (Math.PI * altFraction);
+  // Actually: we draw the sky-arc, angle 0 = right, π = left
+  // We want: π = horizon left, π/2 = zenith top, 0 = horizon right
+  // Moon at altitude A: angle = π - (A/90)*π = π(1 - A/90)
+  const moonAngle = Math.PI * (1 - clampedAlt / 90);
+
+  if (altDeg >= 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, Math.PI, moonAngle, true);
+    const isDark = document.body.classList.contains('night');
+    const grad = ctx.createLinearGradient(cx - radius, cy, cx, cy - radius);
+    grad.addColorStop(0, isDark ? '#7c3aed' : '#2563eb');
+    grad.addColorStop(1, isDark ? '#a78bfa' : '#60a5fa');
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  // Moon dot on arc
+  const moonX = cx + radius * Math.cos(moonAngle);
+  const moonY = cy - radius * Math.abs(Math.sin(moonAngle));
+  // Draw moon circle
+  ctx.beginPath();
+  ctx.arc(moonX, cy - radius * Math.sin(Math.PI - moonAngle), 9, 0, Math.PI * 2);
+  const isDark = document.body.classList.contains('night');
+  ctx.fillStyle = isDark ? '#f0e6c8' : '#fbbf24';
+  ctx.shadowColor = isDark ? 'rgba(240,230,200,0.6)' : 'rgba(251,191,36,0.6)';
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Tick marks
+  [0, 30, 60, 90].forEach(a => {
+    const angle = Math.PI * (1 - a / 90);
+    const x1 = cx + (radius - 10) * Math.cos(angle);
+    const y1 = cy - (radius - 10) * Math.abs(Math.sin(Math.PI - angle));
+    const x2 = cx + (radius + 10) * Math.cos(angle);
+    const y2 = cy - (radius + 10) * Math.abs(Math.sin(Math.PI - angle));
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Label
+    const lx = cx + (radius + 20) * Math.cos(angle);
+    const ly = cy - (radius + 20) * Math.abs(Math.sin(Math.PI - angle));
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(a + '°', lx, ly + 4);
+  });
+}
+
+/* ================================================================
+   MOON DATA CALCULATION
+================================================================ */
+function calcMoon(lat, lon) {
+  const now = new Date();
+  const pos = SunCalc.getMoonPosition(now, lat, lon);
+  const illum = SunCalc.getMoonIllumination(now);
+  const times = SunCalc.getMoonTimes(now, lat, lon);
+
+  const altDeg = radToDeg(pos.altitude);
+  const az = azimuthToCompass(pos.azimuth);
+  const isAbove = altDeg > 0;
+
+  // Next rise/set
+  let riseTime = null, setTime = null;
+  if (times.rise) riseTime = times.rise;
+  if (times.set) setTime = times.set;
+
+  // If moon already set today, check tomorrow
+  let nextRise = riseTime;
+  if (!nextRise || nextRise < now) {
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowTimes = SunCalc.getMoonTimes(tomorrow, lat, lon);
+    if (tomorrowTimes.rise) nextRise = tomorrowTimes.rise;
+  }
+
+  return { altDeg, az, isAbove, illum, riseTime, setTime, nextRise, now };
+}
+
+/* ================================================================
+   RENDER RESULTS
+================================================================ */
+function renderResults(lat, lon, locationName) {
+  const { altDeg, az, isAbove, illum, riseTime, setTime, nextRise, now } = calcMoon(lat, lon);
+
+  // Theme
+  const night = isNighttime(now, lat, lon);
+  applyTheme(night);
+
+  // Location name
+  $('loc-name').textContent = locationName;
+  $('update-time').textContent = `Updated at ${formatTime(now)}`;
+
+  // Phase
+  $('moon-svg-container').innerHTML = renderMoonSVG(illum.fraction, illum.phase);
+  $('phase-name').textContent = getPhaseName(illum.fraction, illum.phase);
+  $('phase-illum').textContent = `${Math.round(illum.fraction * 100)}% illuminated`;
+
+  // Compass
+  $('needle-wrap').style.transform = `rotate(${az.deg}deg)`;
+  $('direction-text').textContent = `Look ${compassToWords(az.label)}`;
+  $('direction-deg').textContent = `${az.deg}° from North`;
+  currentMoonAzimuth = az.deg;
+
+  // Altitude arc
+  drawAltArc(altDeg);
+  if (isAbove) {
+    $('alt-text').textContent = `${Math.round(altDeg)}°`;
+    $('alt-sub').textContent = 'above the horizon';
+  } else {
+    $('alt-text').textContent = `${Math.round(Math.abs(altDeg))}° below`;
+    $('alt-sub').textContent = 'horizon (not visible)';
+  }
+
+  // Visibility
+  const badge = $('vis-badge');
+  if (isAbove) {
+    badge.className = 'above';
+    badge.textContent = '● Visible Now';
+    let detail = `The moon is currently ${Math.round(altDeg)}° above the horizon`;
+    if (setTime && setTime > now) {
+      detail += `, setting at ${formatTime(setTime)}.`;
+    } else {
+      detail += '.';
+    }
+    $('vis-detail').textContent = detail;
+  } else {
+    badge.className = 'below';
+    badge.textContent = '○ Below Horizon';
+    if (nextRise) {
+      $('vis-detail').textContent = `The moon is not visible right now. It will rise at ${formatTime(nextRise)}.`;
+    } else {
+      $('vis-detail').textContent = 'The moon is below the horizon. It may not rise above the horizon today.';
+    }
+  }
+
+  // Show results
+  $('results').classList.add('visible');
+
+  // Reveal live compass button on mobile (first time only)
+  showLiveCompassButton();
+}
+
+/* ================================================================
+   LOCATION: GPS
+================================================================ */
+$('gps-btn').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    setStatus('GPS not available in this browser.', 'error');
+    return;
+  }
+  setStatus('Detecting your location…');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      setStatus(`Got location (${lat.toFixed(2)}, ${lon.toFixed(2)})`, 'ok');
+      renderResults(lat, lon, 'your GPS location');
+      startAutoRefresh(lat, lon, 'your GPS location');
+    },
+    err => {
+      let msg = 'Could not get GPS location. ';
+      if (err.code === 1) msg += 'Permission denied. Try entering a zip code.';
+      else if (err.code === 2) msg += 'Position unavailable.';
+      else msg += 'Request timed out.';
+      setStatus(msg, 'error');
+    },
+    { timeout: 12000, maximumAge: 60000 }
+  );
+});
+
+/* ================================================================
+   LOCATION: ZIP CODE
+================================================================ */
+async function lookupZip(zip) {
+  setStatus('Looking up zip code…');
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if (!res.ok) throw new Error('Not found');
+    const data = await res.json();
+    const place = data.places[0];
+    const lat = parseFloat(place.latitude);
+    const lon = parseFloat(place.longitude);
+    const name = `${place['place name']}, ${place['state abbreviation']}`;
+    setStatus(`Found: ${name}`, 'ok');
+    renderResults(lat, lon, name);
+    startAutoRefresh(lat, lon, name);
+  } catch {
+    setStatus('Zip code not found. Please try again.', 'error');
+  }
+}
+
+$('zip-btn').addEventListener('click', () => {
+  const zip = $('zip-input').value.trim();
+  if (!/^\d{5}$/.test(zip)) { setStatus('Please enter a valid 5-digit US zip code.', 'error'); return; }
+  lookupZip(zip);
+});
+
+$('zip-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('zip-btn').click();
+});
+
+/* ================================================================
+   AUTO-REFRESH
+================================================================ */
+let refreshTimer = null;
+function startAutoRefresh(lat, lon, name) {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => renderResults(lat, lon, name), 60000);
+}
+
+/* ================================================================
+   STATUS HELPER
+================================================================ */
+function setStatus(msg, type) {
+  const el = $('location-status');
+  el.textContent = msg;
+  el.className = type || '';
+}
+
+/* ================================================================
+   LIVE COMPASS
+   Uses DeviceOrientationEvent (requires a hardware magnetometer).
+   iOS 13+ needs explicit permission; Android uses the absolute event.
+================================================================ */
+let currentMoonAzimuth = 0;
+let compassHeading = 0;
+let compassActive = false;
+let compassAnimFrame = null;
+
+function isMobileDevice() {
+  return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))
+      && (typeof DeviceOrientationEvent !== 'undefined');
+}
+
+function showLiveCompassButton() {
+  // Only reveal once; check via class presence
+  const section = $('live-compass-section');
+  if (section.classList.contains('visible')) return;
+  if (isMobileDevice()) section.classList.add('visible');
+}
+
+function handleOrientationEvent(e) {
+  if (!compassActive) return;
+  if (typeof e.webkitCompassHeading === 'number') {
+    // iOS: 0 = North, clockwise
+    compassHeading = e.webkitCompassHeading;
+  } else if (e.alpha != null) {
+    // Android absolute: alpha is counter-clockwise from North, so invert
+    compassHeading = (360 - e.alpha + 360) % 360;
+  }
+}
+
+async function enableLiveCompass() {
+  // iOS 13+ requires a user-gesture-triggered permission request
+  if (typeof DeviceOrientationEvent !== 'undefined'
+      && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result !== 'granted') {
+        $('compass-perm-note').textContent = 'Compass permission denied. Check iOS Settings → Safari → Motion & Orientation.';
+        return;
+      }
+    } catch {
+      $('compass-perm-note').textContent = 'Could not request compass access.';
+      return;
+    }
+  }
+  $('compass-perm-note').textContent = '';
+  compassActive = true;
+  $('compass-toggle-btn').textContent = '🧭 Live Compass: ON';
+  $('compass-toggle-btn').classList.add('active');
+  $('live-compass-wrap').classList.add('visible');
+
+  // Prefer absolute orientation (Android Chromium); always also add regular (iOS)
+  if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', handleOrientationEvent, true);
+  }
+  window.addEventListener('deviceorientation', handleOrientationEvent, true);
+
+  startCompassDraw();
+}
+
+function disableLiveCompass() {
+  compassActive = false;
+  $('compass-toggle-btn').textContent = '🧭 Enable Live Compass';
+  $('compass-toggle-btn').classList.remove('active');
+  $('live-compass-wrap').classList.remove('visible');
+  window.removeEventListener('deviceorientationabsolute', handleOrientationEvent, true);
+  window.removeEventListener('deviceorientation', handleOrientationEvent, true);
+  if (compassAnimFrame) { cancelAnimationFrame(compassAnimFrame); compassAnimFrame = null; }
+}
+
+$('compass-toggle-btn').addEventListener('click', () => {
+  if (compassActive) disableLiveCompass();
+  else enableLiveCompass();
+});
+
+function startCompassDraw() {
+  const canvas = $('compass-canvas');
+  const ctx = canvas.getContext('2d');
+  function frame() {
+    if (!compassActive) return;
+    drawLiveCompassCanvas(ctx, compassHeading, currentMoonAzimuth);
+    compassAnimFrame = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function drawLiveCompassCanvas(ctx, heading, moonAzimuth) {
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = 96;
+  const isDark = document.body.classList.contains('night');
+  ctx.clearRect(0, 0, W, H);
+
+  // Outer glow ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, R + 5, 0, Math.PI * 2);
+  ctx.strokeStyle = isDark ? 'rgba(167,139,250,0.18)' : 'rgba(37,99,235,0.14)';
+  ctx.lineWidth = 9;
+  ctx.stroke();
+
+  // Background disc
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? 'rgba(6,12,30,0.9)' : 'rgba(219,234,254,0.78)';
+  ctx.fill();
+  ctx.strokeStyle = isDark ? 'rgba(167,139,250,0.55)' : 'rgba(37,99,235,0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // ── Everything inside here rotates with the compass ──
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(degToRad(-heading));
+
+  // Degree tick marks
+  for (let i = 0; i < 360; i += 5) {
+    const rad = degToRad(i);
+    const sin = Math.sin(rad), cos = -Math.cos(rad);
+    const isCard = (i % 90 === 0);
+    const isMaj  = (i % 30 === 0);
+    const inner  = isCard ? R - 21 : isMaj ? R - 13 : R - 7;
+    ctx.beginPath();
+    ctx.moveTo(sin * inner, cos * inner);
+    ctx.lineTo(sin * R,     cos * R);
+    ctx.strokeStyle = isCard
+      ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,50,0.85)')
+      : (isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,50,0.18)');
+    ctx.lineWidth = isCard ? 2.5 : isMaj ? 1.5 : 0.8;
+    ctx.stroke();
+  }
+
+  // Cardinal labels (N is red for quick orientation)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  [['N',0,'#ef4444'],['E',90,null],['S',180,null],['W',270,null]].forEach(([label, angle, color]) => {
+    const rad = degToRad(angle);
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = color || (isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,50,0.8)');
+    ctx.fillText(label, Math.sin(rad) * (R - 32), -Math.cos(rad) * (R - 32));
+  });
+
+  // Intercardinal labels
+  ctx.font = '10px system-ui, sans-serif';
+  ['NE','SE','SW','NW'].forEach((label, i) => {
+    const rad = degToRad(45 + i * 90);
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,50,0.38)';
+    ctx.fillText(label, Math.sin(rad) * (R - 23), -Math.cos(rad) * (R - 23));
+  });
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? '#a78bfa' : '#2563eb';
+  ctx.fill();
+
+  // Moon marker — placed at the moon's azimuth on the ring
+  const moonRad = degToRad(moonAzimuth);
+  const mx = Math.sin(moonRad) * (R - 11);
+  const my = -Math.cos(moonRad) * (R - 11);
+
+  // Glow halo around moon
+  ctx.beginPath();
+  ctx.arc(mx, my, 17, 0, Math.PI * 2);
+  ctx.fillStyle = isDark ? 'rgba(167,139,250,0.22)' : 'rgba(251,191,36,0.32)';
+  ctx.fill();
+
+  // Moon emoji on the ring
+  ctx.font = '22px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🌙', mx, my);
+
+  ctx.restore();
+  // ── End rotating section ──
+
+  // Fixed "you are facing" arrow at top — does NOT rotate
+  ctx.save();
+  ctx.translate(cx, cy - R - 3);
+  ctx.beginPath();
+  ctx.moveTo(0, 3);
+  ctx.lineTo(-9, -13);
+  ctx.lineTo(9, -13);
+  ctx.closePath();
+  ctx.fillStyle = isDark ? '#a78bfa' : '#2563eb';
+  ctx.shadowColor = isDark ? 'rgba(167,139,250,0.8)' : 'rgba(37,99,235,0.6)';
+  ctx.shadowBlur = 10;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Dashed guide line from center to forward indicator
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 10);
+  ctx.lineTo(cx, cy - R + 3);
+  ctx.strokeStyle = isDark ? 'rgba(167,139,250,0.28)' : 'rgba(37,99,235,0.28)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ================================================================
+   INIT
+================================================================ */
+(function init() {
+  // Set initial theme from clock (no location yet)
+  const h = new Date().getHours();
+  const isNight = h < 6 || h >= 20;
+  applyTheme(isNight);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Test output
+test-results/
+test-results.txt
+verify-results.txt
+UI Unit tests Results.txt
+
+# Office / binary docs (kept local only)
+*.docx
+*.pptx
+
+# macOS system files
+.DS_Store
+
+# Claude Code session data
+.claude/
+
+# Playwright browser downloads (if any)
+/playwright-report/
