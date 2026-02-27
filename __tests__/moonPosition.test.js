@@ -15,7 +15,7 @@
  */
 
 const SunCalc  = require('suncalc');
-const { calcMoon, radToDeg } = require('../src/moonLogic');
+const { calcMoon, radToDeg, refractionCorrection } = require('../src/moonLogic');
 
 // ── Shared test coordinates ───────────────────────────────────────────────────
 // New York City
@@ -58,9 +58,11 @@ describe('calcMoon() — unit tests with mocked SunCalc', () => {
   });
 
   // ── altitude conversion ───────────────────────────────────────────────────
-  it('converts altitude from radians to degrees correctly (30° above horizon)', () => {
+  it('converts altitude from radians to degrees and applies refraction (30° above horizon)', () => {
+    // Mock returns 30° exactly; refraction at 30° adds ~0.029°, so result > 30
     const result = calcMoon(NYC_LAT, NYC_LON, new Date());
-    expect(result.altDeg).toBeCloseTo(30, 4);
+    expect(result.altDeg).toBeGreaterThan(30);
+    expect(result.altDeg).toBeCloseTo(30, 1); // within 0.1° of 30
   });
 
   it('sets isAbove = true when altitude is positive', () => {
@@ -75,11 +77,13 @@ describe('calcMoon() — unit tests with mocked SunCalc', () => {
     expect(result.isAbove).toBe(false);
   });
 
-  it('sets isAbove = false when moon is exactly on the horizon (0°)', () => {
+  it('moon at geometric horizon (0°) appears above horizon after refraction correction', () => {
+    // Refraction lifts the moon ~0.48° at 0° geometric altitude —
+    // so a moon sitting exactly on the geometric horizon IS actually visible.
     spyPosition.mockReturnValue({ altitude: 0, azimuth: 0 });
     const result = calcMoon(NYC_LAT, NYC_LON, new Date());
-    expect(result.altDeg).toBeCloseTo(0, 4);
-    expect(result.isAbove).toBe(false); // 0 is NOT > 0
+    expect(result.altDeg).toBeGreaterThan(0);
+    expect(result.isAbove).toBe(true);
   });
 
   // ── azimuth conversion ────────────────────────────────────────────────────
@@ -162,6 +166,50 @@ describe('calcMoon() — unit tests with mocked SunCalc', () => {
   });
 });
 
+// ── REFRACTION CORRECTION TESTS ──────────────────────────────────────────────
+
+describe('refractionCorrection()', () => {
+  it('returns a positive correction at the horizon (0°)', () => {
+    expect(refractionCorrection(0)).toBeGreaterThan(0);
+  });
+
+  it('returns less than 0.6° at the horizon (physically plausible max)', () => {
+    expect(refractionCorrection(0)).toBeLessThan(0.6);
+  });
+
+  it('returns a smaller correction at 10° than at 0°', () => {
+    expect(refractionCorrection(10)).toBeLessThan(refractionCorrection(0));
+  });
+
+  it('returns less than 0.1° above 20° (negligible in practice)', () => {
+    expect(refractionCorrection(20)).toBeLessThan(0.1);
+  });
+
+  it('returns exactly 0 when moon is well below horizon (-2°)', () => {
+    expect(refractionCorrection(-2)).toBe(0);
+  });
+
+  it('returns exactly 0 for deeply negative altitudes (-45°)', () => {
+    expect(refractionCorrection(-45)).toBe(0);
+  });
+
+  it('correction decreases monotonically from horizon to overhead', () => {
+    const c0  = refractionCorrection(0);
+    const c10 = refractionCorrection(10);
+    const c30 = refractionCorrection(30);
+    const c60 = refractionCorrection(60);
+    expect(c0).toBeGreaterThan(c10);
+    expect(c10).toBeGreaterThan(c30);
+    expect(c30).toBeGreaterThan(c60);
+  });
+
+  it('correction is always positive for altitudes between -1° and 90°', () => {
+    [-1, 0, 5, 10, 30, 60, 90].forEach(alt => {
+      expect(refractionCorrection(alt)).toBeGreaterThanOrEqual(0);
+    });
+  });
+});
+
 // ── INTEGRATION TESTS (real SunCalc) ─────────────────────────────────────────
 
 describe('calcMoon() — integration tests with real SunCalc', () => {
@@ -201,11 +249,14 @@ describe('calcMoon() — integration tests with real SunCalc', () => {
       expect(result.isAbove).toBe(result.altDeg > 0);
     });
 
-    it('transformation matches direct SunCalc call (altitude)', () => {
+    it('altDeg is higher than raw SunCalc altitude by the refraction amount', () => {
       const rawPos = SunCalc.getMoonPosition(FULL_MOON_DATE, NYC_LAT, NYC_LON);
-      const expectedAlt = rawPos.altitude * (180 / Math.PI);
+      const rawAlt = rawPos.altitude * (180 / Math.PI);
       const result = calcMoon(NYC_LAT, NYC_LON, FULL_MOON_DATE);
-      expect(result.altDeg).toBeCloseTo(expectedAlt, 4);
+      // Refraction always adds a positive correction
+      expect(result.altDeg).toBeGreaterThanOrEqual(rawAlt);
+      // But never more than 1° higher (max refraction is ~0.57°)
+      expect(result.altDeg - rawAlt).toBeLessThan(1);
     });
 
     it('transformation matches direct SunCalc call (azimuth degrees)', () => {
