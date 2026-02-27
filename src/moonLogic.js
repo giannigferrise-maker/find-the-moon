@@ -135,6 +135,29 @@ function getTheme(date, lat, lon) {
 }
 
 /* ================================================================
+   ATMOSPHERIC REFRACTION CORRECTION
+================================================================ */
+
+/**
+ * Estimate the atmospheric refraction correction for a given true altitude.
+ *
+ * The atmosphere bends light upward near the horizon, making the moon appear
+ * higher than its true geometric position. This correction is most significant
+ * near the horizon (~0.57° at 0°) and negligible above ~20°.
+ *
+ * Uses the Bennett formula (1982), accurate to ~0.07 arcminutes.
+ *
+ * @param {number} altDeg – true geometric altitude in degrees
+ * @returns {number}        correction in degrees (always positive; add to altDeg)
+ */
+function refractionCorrection(altDeg) {
+  if (altDeg < -1) return 0; // moon is well below horizon; no correction needed
+  if (altDeg > 89) return 0; // near zenith: correction negligible and formula breaks down
+  const h = Math.max(altDeg, 0); // clamp to 0 for horizon-level calculation
+  return 1.02 / Math.tan(degToRad(h + 10.3 / (h + 5.11))) / 60;
+}
+
+/* ================================================================
    MOON CALCULATION
 ================================================================ */
 
@@ -162,7 +185,7 @@ function calcMoon(lat, lon, date) {
   const illum = SunCalc.getMoonIllumination(now);
   const times = SunCalc.getMoonTimes(now, lat, lon);
 
-  const altDeg = radToDeg(pos.altitude);
+  const altDeg = radToDeg(pos.altitude) + refractionCorrection(radToDeg(pos.altitude));
   const az     = azimuthToCompass(pos.azimuth);
   const isAbove = altDeg > 0;
 
@@ -207,6 +230,7 @@ module.exports = {
   getPhaseName,
   isNighttime,
   getTheme,
+  refractionCorrection,
   calcMoon,
   validateZipCode,
 };
