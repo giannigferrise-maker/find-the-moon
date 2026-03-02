@@ -6,10 +6,11 @@
  * Tests for betaToElevation() — the pure math function that converts a
  * DeviceOrientationEvent beta angle into an elevation angle above the horizon.
  *
- * Convention:
- *   beta ≈ 90 → phone upright  → looking at horizon  → 0° elevation
- *   beta ≈  0 → phone face-up  → looking straight up → 90° elevation
- *   elevation = clamp(90 − beta, 0, 90)
+ * Convention (matches observed iPhone behavior):
+ *   beta ≈  90 → phone upright   → camera at horizon  → 0° elevation
+ *   beta ≈ 180 → phone face-down → camera at sky      → 90° elevation
+ *   beta ≈   0 → phone face-up   → camera at ground   → clamped to 0°
+ *   elevation = clamp(beta − 90, 0, 90)
  */
 
 const { betaToElevation } = require('../src/moonLogic');
@@ -18,44 +19,43 @@ describe('betaToElevation()', () => {
 
   // ── Key reference points ──────────────────────────────────────────────────
 
-  it('returns 0° when phone is upright (beta = 90) — looking at horizon', () => {
+  it('returns 0° when phone is upright (beta = 90) — camera at horizon', () => {
     expect(betaToElevation(90)).toBe(0);
   });
 
-  it('returns 90° when phone is flat face-up (beta = 0) — looking straight up', () => {
-    expect(betaToElevation(0)).toBe(90);
+  it('returns 90° when phone is face-down (beta = 180) — camera pointing at sky', () => {
+    expect(betaToElevation(180)).toBe(90);
   });
 
-  it('returns 45° when phone is at 45° (beta = 45)', () => {
-    expect(betaToElevation(45)).toBe(45);
+  it('returns 45° when phone is at 45° above upright (beta = 135)', () => {
+    expect(betaToElevation(135)).toBe(45);
   });
 
-  it('returns 30° when beta = 60', () => {
-    expect(betaToElevation(60)).toBe(30);
+  it('returns 30° when beta = 120', () => {
+    expect(betaToElevation(120)).toBe(30);
   });
 
-  it('returns 60° when beta = 30', () => {
-    expect(betaToElevation(30)).toBe(60);
+  it('returns 60° when beta = 150', () => {
+    expect(betaToElevation(150)).toBe(60);
   });
 
-  // ── Clamping — below horizon ───────────────────────────────────────────────
+  // ── Clamping — camera below horizon ───────────────────────────────────────
 
-  it('clamps to 0° when phone is past vertical (beta = 100) — pointing downward', () => {
-    expect(betaToElevation(100)).toBe(0);
+  it('clamps to 0° when phone is slightly above upright (beta = 100) — still near horizon', () => {
+    expect(betaToElevation(100)).toBe(10);
   });
 
-  it('clamps to 0° for large beta values (beta = 180)', () => {
-    expect(betaToElevation(180)).toBe(0);
+  it('clamps to 0° when phone is face-up (beta = 0) — camera pointing at ground', () => {
+    expect(betaToElevation(0)).toBe(0);
+  });
+
+  it('clamps to 0° for beta below 90 (phone not yet tilted toward sky)', () => {
+    expect(betaToElevation(45)).toBe(0);
+    expect(betaToElevation(80)).toBe(0);
   });
 
   it('clamps to 0° for negative beta (phone tilted forward past vertical)', () => {
-    expect(betaToElevation(-10)).toBe(90); // 90 - (-10) = 100, clamped to 90
-  });
-
-  // ── Clamping — above zenith ───────────────────────────────────────────────
-
-  it('clamps to 90° for very negative beta values', () => {
-    expect(betaToElevation(-45)).toBe(90);
+    expect(betaToElevation(-10)).toBe(0);
   });
 
   // ── Output range ─────────────────────────────────────────────────────────
@@ -70,10 +70,10 @@ describe('betaToElevation()', () => {
 
   // ── Monotonicity ──────────────────────────────────────────────────────────
 
-  it('elevation decreases as beta increases (tilting phone down lowers elevation)', () => {
-    expect(betaToElevation(0)).toBeGreaterThan(betaToElevation(30));
-    expect(betaToElevation(30)).toBeGreaterThan(betaToElevation(60));
-    expect(betaToElevation(60)).toBeGreaterThan(betaToElevation(89));
+  it('elevation increases as beta increases (tilting phone toward sky raises elevation)', () => {
+    expect(betaToElevation(120)).toBeGreaterThan(betaToElevation(100));
+    expect(betaToElevation(150)).toBeGreaterThan(betaToElevation(120));
+    expect(betaToElevation(180)).toBeGreaterThan(betaToElevation(150));
   });
 
 });

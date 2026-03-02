@@ -211,9 +211,10 @@ function calcMoon(lat, lon, date) {
 /**
  * Convert a DeviceOrientation beta angle to an elevation angle above the horizon.
  *
- * When holding a phone in portrait mode pointed at the sky:
- *   beta ≈ 90 → phone upright  → looking at horizon   → 0° elevation
- *   beta ≈  0 → phone face-up  → looking straight up  → 90° elevation
+ * On iOS/Android, beta increases as you tilt the top of the phone away from you:
+ *   beta ≈  90 → phone upright  → looking at horizon   → 0° elevation
+ *   beta ≈ 180 → phone face-down → camera points at sky → 90° elevation
+ *   beta ≈   0 → phone face-up  → camera points at ground → clamped to 0°
  *
  * Result is clamped to [0, 90] — we only track above-horizon angles.
  *
@@ -221,7 +222,7 @@ function calcMoon(lat, lon, date) {
  * @returns {number}      elevation angle in degrees [0, 90]
  */
 function betaToElevation(beta) {
-  return Math.max(0, Math.min(90, 90 - beta));
+  return Math.max(0, Math.min(90, beta - 90));
 }
 
 /* ================================================================

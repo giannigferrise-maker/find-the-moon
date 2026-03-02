@@ -1182,9 +1182,9 @@ test.describe('[FTM-TG-002] Tilt indicator draws on arc regardless of moon visib
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Mock moon altitude: 0.5236 rad ≈ 30° + ~0.03° refraction ≈ 30°
-// betaToElevation(60) = 30° → on target
-// betaToElevation(85) =  5° → tilt up ~25°
-// betaToElevation(20) = 70° → tilt down ~40°
+// betaToElevation(120) = 30° → on target  (beta - 90 = 30)
+// betaToElevation(95)  =  5° → tilt up ~25°  (beta - 90 = 5)
+// betaToElevation(160) = 70° → tilt down ~40°  (beta - 90 = 70)
 
 test.describe('[FTM-TG-003] Tilt feedback text reflects accuracy', () => {
   test('shows "On target" when device elevation matches moon altitude (±3°)', async ({ page }) => {
@@ -1193,7 +1193,7 @@ test.describe('[FTM-TG-003] Tilt feedback text reflects accuracy', () => {
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
     await page.click('#tilt-toggle-btn');
-    await dispatchTiltEvent(page, 60); // elevation ≈ 30° = moon altitude
+    await dispatchTiltEvent(page, 120); // elevation = beta-90 = 30° ≈ moon altitude
     await expect(page.locator('#tilt-feedback'))
       .toContainText(/on target/i, { timeout: 3000 });
   });
@@ -1204,7 +1204,7 @@ test.describe('[FTM-TG-003] Tilt feedback text reflects accuracy', () => {
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
     await page.click('#tilt-toggle-btn');
-    await dispatchTiltEvent(page, 85); // elevation = 5°, moon at 30° → tilt up
+    await dispatchTiltEvent(page, 95); // elevation = beta-90 = 5°, moon at 30° → tilt up
     await expect(page.locator('#tilt-feedback'))
       .toContainText(/tilt up/i, { timeout: 3000 });
   });
@@ -1215,7 +1215,7 @@ test.describe('[FTM-TG-003] Tilt feedback text reflects accuracy', () => {
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
     await page.click('#tilt-toggle-btn');
-    await dispatchTiltEvent(page, 20); // elevation = 70°, moon at 30° → tilt down
+    await dispatchTiltEvent(page, 160); // elevation = beta-90 = 70°, moon at 30° → tilt down
     await expect(page.locator('#tilt-feedback'))
       .toContainText(/tilt down/i, { timeout: 3000 });
   });
