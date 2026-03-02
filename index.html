@@ -1186,7 +1186,7 @@ function startTiltDraw() {
     const feedback = $('tilt-feedback');
 
     if (currentMoonAltitude <= 0) {
-      drawAltArc(currentMoonAltitude);
+      drawAltArc(currentMoonAltitude, deviceElevation);
       feedback.textContent = 'Moon is below the horizon';
       feedback.className = 'off';
     } else {
