@@ -418,6 +418,71 @@
       min-height: 1em;
     }
 
+    /* ─── Tilt Guide ─────────────────────────────────────────────── */
+    #tilt-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.75rem;
+      width: 100%;
+    }
+    #tilt-section.visible { display: flex; }
+
+    #tilt-toggle-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.6rem 1.1rem;
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    #tilt-toggle-btn:hover  { background: rgba(255,255,255,0.13); border-color: var(--accent); }
+    #tilt-toggle-btn.active { background: rgba(167,139,250,0.15); border-color: var(--accent); color: var(--accent); }
+
+    #tilt-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      width: 100%;
+    }
+    #tilt-wrap.visible { display: flex; }
+
+    #tilt-feedback {
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-align: center;
+      min-height: 1.4em;
+      transition: color 0.3s;
+    }
+    #tilt-feedback.on-target { color: #34d399; }
+    #tilt-feedback.close     { color: #fbbf24; }
+    #tilt-feedback.off       { color: var(--text); }
+
+    #tilt-hint {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.5;
+      max-width: 240px;
+    }
+
+    #tilt-perm-note {
+      font-size: 0.75rem;
+      color: #f87171;
+      text-align: center;
+      min-height: 1em;
+    }
+
     /* ─── Responsive ─────────────────────────────────────────────── */
     @media (max-width: 400px) {
       #app { padding: 1.5rem 1rem 2.5rem; }
@@ -505,6 +570,16 @@
       </div>
       <div id="alt-text">—</div>
       <div id="alt-sub">above the horizon</div>
+
+      <!-- Tilt Guide — shown only on devices with an orientation sensor -->
+      <div id="tilt-section">
+        <button id="tilt-toggle-btn">📐 Enable Tilt Guide</button>
+        <div id="tilt-wrap">
+          <p id="tilt-feedback"></p>
+          <p id="tilt-hint">Hold your phone like a camera pointing at the sky, then tilt until you're on target.</p>
+        </div>
+        <p id="tilt-perm-note"></p>
+      </div>
     </div>
 
     <!-- Visibility -->
@@ -527,6 +602,13 @@ const $ = id => document.getElementById(id);
 
 function radToDeg(r) { return r * (180 / Math.PI); }
 function degToRad(d) { return d * (Math.PI / 180); }
+
+function refractionCorrection(altDeg) {
+  if (altDeg < -1) return 0;
+  if (altDeg > 89) return 0;
+  const h = Math.max(altDeg, 0);
+  return 1.02 / Math.tan(degToRad(h + 10.3 / (h + 5.11))) / 60;
+}
 
 function azimuthToCompass(az) {
   // SunCalc azimuth: 0 = South, π = North, π/2 = West, -π/2 = East
@@ -738,7 +820,7 @@ function getPhaseName(fraction, angle) {
 /* ================================================================
    ALTITUDE ARC RENDERER
 ================================================================ */
-function drawAltArc(altDeg) {
+function drawAltArc(altDeg, deviceElevation) {
   const canvas = $('alt-arc');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -801,6 +883,35 @@ function drawAltArc(altDeg) {
   ctx.fill();
   ctx.shadowBlur = 0;
 
+  // ── Tilt indicator (shown when tilt guide is active) ────────────
+  if (deviceElevation !== undefined) {
+    const clampedDev = Math.max(0, Math.min(90, deviceElevation));
+    const devAngle   = Math.PI * (1 - clampedDev / 90);
+    const dx = cx + radius * Math.cos(devAngle);
+    const dy = cy - radius * Math.sin(Math.PI - devAngle);
+    const diff = Math.abs(deviceElevation - altDeg);
+    const tiltColor = diff <= 3 ? '#34d399' : diff <= 12 ? '#fbbf24' : 'rgba(255,255,255,0.55)';
+
+    // Dashed line from centre out to the arc
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(dx, dy);
+    ctx.strokeStyle = tiltColor;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dot on the arc at current device elevation
+    ctx.beginPath();
+    ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = tiltColor;
+    ctx.shadowColor = tiltColor;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
   // Tick marks
   [0, 30, 60, 90].forEach(a => {
     const angle = Math.PI * (1 - a / 90);
@@ -833,7 +944,7 @@ function calcMoon(lat, lon) {
   const illum = SunCalc.getMoonIllumination(now);
   const times = SunCalc.getMoonTimes(now, lat, lon);
 
-  const altDeg = radToDeg(pos.altitude);
+  const altDeg = radToDeg(pos.altitude) + refractionCorrection(radToDeg(pos.altitude));
   const az = azimuthToCompass(pos.azimuth);
   const isAbove = altDeg > 0;
 
@@ -876,7 +987,8 @@ function renderResults(lat, lon, locationName) {
   $('needle-wrap').style.transform = `rotate(${az.deg}deg)`;
   $('direction-text').textContent = `Look ${compassToWords(az.label)}`;
   $('direction-deg').textContent = `${az.deg}° from North`;
-  currentMoonAzimuth = az.deg;
+  currentMoonAzimuth   = az.deg;
+  currentMoonAltitude  = altDeg;
 
   // Altitude arc
   drawAltArc(altDeg);
@@ -913,8 +1025,9 @@ function renderResults(lat, lon, locationName) {
   // Show results
   $('results').classList.add('visible');
 
-  // Reveal live compass button on mobile (first time only)
+  // Reveal live compass + tilt buttons on mobile (first time only)
   showLiveCompassButton();
+  showTiltButton();
 }
 
 /* ================================================================
@@ -998,10 +1111,109 @@ function setStatus(msg, type) {
    Uses DeviceOrientationEvent (requires a hardware magnetometer).
    iOS 13+ needs explicit permission; Android uses the absolute event.
 ================================================================ */
-let currentMoonAzimuth = 0;
-let compassHeading = 0;
-let compassActive = false;
-let compassAnimFrame = null;
+let currentMoonAzimuth  = 0;
+let currentMoonAltitude = 0;
+let compassHeading      = 0;
+let compassActive       = false;
+let compassAnimFrame    = null;
+
+/* ================================================================
+   TILT GUIDE
+   Uses DeviceOrientationEvent beta (front-to-back tilt).
+     beta ≈ 90 = phone upright → looking at horizon  (0° elevation)
+     beta ≈  0 = phone flat/face-up → looking straight up (90°)
+   elevation = 90 − beta  (clamped 0–90)
+================================================================ */
+let tiltActive    = false;
+let deviceBeta    = 90;   // default = vertical = 0° elevation
+let tiltAnimFrame = null;
+
+function betaToElevation(beta) {
+  // beta ≈ 90 = upright (horizon, 0°); beta ≈ 0 = face-up (zenith, 90°)
+  return Math.max(0, Math.min(90, 90 - beta));
+}
+
+function handleTiltEvent(e) {
+  if (!tiltActive) return;
+  if (e.beta != null) deviceBeta = e.beta;
+}
+
+async function enableTiltGuide() {
+  if (typeof DeviceOrientationEvent !== 'undefined'
+      && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceOrientationEvent.requestPermission();
+      if (result !== 'granted') {
+        $('tilt-perm-note').textContent = 'Motion permission denied. Check iOS Settings → Safari → Motion & Orientation.';
+        return;
+      }
+    } catch {
+      $('tilt-perm-note').textContent = 'Could not request motion access.';
+      return;
+    }
+  }
+  $('tilt-perm-note').textContent = '';
+  tiltActive = true;
+  $('tilt-toggle-btn').textContent = '📐 Tilt Guide: ON';
+  $('tilt-toggle-btn').classList.add('active');
+  $('tilt-wrap').classList.add('visible');
+  if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', handleTiltEvent, true);
+  }
+  window.addEventListener('deviceorientation', handleTiltEvent, true);
+  startTiltDraw();
+}
+
+function disableTiltGuide() {
+  tiltActive = false;
+  $('tilt-toggle-btn').textContent = '📐 Enable Tilt Guide';
+  $('tilt-toggle-btn').classList.remove('active');
+  $('tilt-wrap').classList.remove('visible');
+  window.removeEventListener('deviceorientationabsolute', handleTiltEvent, true);
+  window.removeEventListener('deviceorientation', handleTiltEvent, true);
+  if (tiltAnimFrame) { cancelAnimationFrame(tiltAnimFrame); tiltAnimFrame = null; }
+  drawAltArc(currentMoonAltitude); // redraw arc without tilt overlay
+}
+
+$('tilt-toggle-btn').addEventListener('click', () => {
+  if (tiltActive) disableTiltGuide(); else enableTiltGuide();
+});
+
+function startTiltDraw() {
+  function frame() {
+    if (!tiltActive) return;
+    const deviceElevation = betaToElevation(deviceBeta);
+    const feedback = $('tilt-feedback');
+
+    if (currentMoonAltitude <= 0) {
+      drawAltArc(currentMoonAltitude);
+      feedback.textContent = 'Moon is below the horizon';
+      feedback.className = 'off';
+    } else {
+      drawAltArc(currentMoonAltitude, deviceElevation);
+      const diff    = deviceElevation - currentMoonAltitude;
+      const absDiff = Math.abs(diff);
+      if (absDiff <= 3) {
+        feedback.textContent = '✓ On target!';
+        feedback.className   = 'on-target';
+      } else if (diff > 0) {
+        feedback.textContent = `Tilt down ${Math.round(absDiff)}°`;
+        feedback.className   = absDiff < 12 ? 'close' : 'off';
+      } else {
+        feedback.textContent = `Tilt up ${Math.round(absDiff)}°`;
+        feedback.className   = absDiff < 12 ? 'close' : 'off';
+      }
+    }
+    tiltAnimFrame = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function showTiltButton() {
+  const section = $('tilt-section');
+  if (section.classList.contains('visible')) return;
+  if (isMobileDevice()) section.classList.add('visible');
+}
 
 function isMobileDevice() {
   return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0))

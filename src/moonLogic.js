@@ -205,6 +205,26 @@ function calcMoon(lat, lon, date) {
 }
 
 /* ================================================================
+   TILT / ELEVATION CONVERSION
+================================================================ */
+
+/**
+ * Convert a DeviceOrientation beta angle to an elevation angle above the horizon.
+ *
+ * When holding a phone in portrait mode pointed at the sky:
+ *   beta ≈ 90 → phone upright  → looking at horizon   → 0° elevation
+ *   beta ≈  0 → phone face-up  → looking straight up  → 90° elevation
+ *
+ * Result is clamped to [0, 90] — we only track above-horizon angles.
+ *
+ * @param {number} beta – DeviceOrientationEvent.beta in degrees
+ * @returns {number}      elevation angle in degrees [0, 90]
+ */
+function betaToElevation(beta) {
+  return Math.max(0, Math.min(90, 90 - beta));
+}
+
+/* ================================================================
    ZIP CODE VALIDATION
 ================================================================ */
 
@@ -231,6 +251,7 @@ module.exports = {
   isNighttime,
   getTheme,
   refractionCorrection,
+  betaToElevation,
   calcMoon,
   validateZipCode,
 };
