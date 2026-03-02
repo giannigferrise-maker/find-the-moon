@@ -422,14 +422,51 @@ Notes       | Three tests: "Updated at" text present after zip lookup;
             | parseable HH:MM time string present; also shown after GPS lookup.
 
 ================================================================================
+ SECTION 9 — TILT GUIDE REQUIREMENTS  (added 2026-03-02)
+================================================================================
+
+Req ID      | FTM-TG-001
+Title       | Tilt guide button appears on mobile after location is set
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-TG-001] Tilt guide button visible on mobile after location set
+Notes       | Button hidden until location resolved; visible on mobile devices
+            | with DeviceOrientation support
+
+Req ID      | FTM-TG-002
+Title       | Tilt indicator visible on arc regardless of moon visibility
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-TG-002] Tilt indicator draws on arc regardless of moon visibility
+Notes       | Dashed tilt line and dot must appear on the altitude arc whether
+            | the moon is above or below the horizon
+
+Req ID      | FTM-TG-003
+Title       | Feedback text reflects tilt accuracy
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-TG-003] Tilt feedback text reflects accuracy
+Notes       | "✓ On target!" when within 3°; directional hint otherwise
+            | (e.g. "Tilt up X°" / "Tilt down X°")
+
+Req ID      | FTM-TG-004
+Title       | Moon below horizon shows correct message with tilt indicator
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-TG-004] Moon below horizon — message shown and tilt indicator active
+Notes       | When moon altitude <= 0, feedback reads "Moon is below the horizon"
+            | but tilt indicator still draws on the arc
+
+================================================================================
  SUMMARY
 ================================================================================
 
-Total SRS requirements:                  47
+Total SRS requirements:                  51  (47 original + 4 TG additions)
 
-Covered by automated tests:              39
+Covered by automated tests:              43
   - verification.test.js (Jest):          8  (FR-003, FR-010–013, FR-021, FR-030–031)
-  - verification.spec.js (Playwright):   31  (all remaining Test-method requirements)
+  - verification.spec.js (Playwright):   35  (all remaining Test-method requirements
+                                             including TG-001 through TG-004)
   - Both files (dual coverage):           4  (FR-012, FR-013, FR-030, FR-031)
 
 Inspection method (manual review):        6  (IR-002, IR-003, RR-001, PS-001–006, UR-001)

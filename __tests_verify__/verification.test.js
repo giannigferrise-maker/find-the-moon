@@ -157,10 +157,11 @@ describe('[FTM-FR-011] Calculate moon altitude angle', () => {
     });
   }
 
-  it('converts altitude from radians to degrees (30°)', () => {
-    mockPosition(Math.PI / 6);  // 30°
+  it('converts altitude from radians to degrees and applies refraction (30°)', () => {
+    mockPosition(Math.PI / 6);  // 30° raw; refraction adds ~0.03°
     const { altDeg } = calcMoon(40.7128, -74.006, new Date());
-    expect(altDeg).toBeCloseTo(30, 2);
+    expect(altDeg).toBeGreaterThan(30);
+    expect(altDeg).toBeCloseTo(30, 1); // within 0.1° of 30
   });
 
   it('returns a negative altitude when the moon is below the horizon', () => {
@@ -176,10 +177,12 @@ describe('[FTM-FR-011] Calculate moon altitude angle', () => {
     expect(altDeg).toBeLessThanOrEqual(90);
   });
 
-  it('returns 0° for a moon on the exact horizon', () => {
+  it('moon at geometric horizon (0°) appears slightly above after refraction correction', () => {
     mockPosition(0);
     const { altDeg } = calcMoon(40.7128, -74.006, new Date());
-    expect(altDeg).toBeCloseTo(0, 4);
+    // Refraction lifts the moon ~0.48° at 0° geometric altitude
+    expect(altDeg).toBeGreaterThan(0);
+    expect(altDeg).toBeLessThan(1);
   });
 });
 
@@ -259,10 +262,10 @@ describe('[FTM-FR-013] Indicate whether moon is above or below the horizon', () 
     expect(calcMoon(40.7128, -74.006, new Date()).isAbove).toBe(false);
   });
 
-  it('sets isAbove = false when the moon is exactly on the horizon (0°)', () => {
-    // 0° is not "above" the horizon
+  it('sets isAbove = true when the moon is exactly on the geometric horizon (0°)', () => {
+    // Refraction lifts a 0° moon to ~0.48° — so it IS above the visible horizon
     mockAlt(0);
-    expect(calcMoon(40.7128, -74.006, new Date()).isAbove).toBe(false);
+    expect(calcMoon(40.7128, -74.006, new Date()).isAbove).toBe(true);
   });
 
   it('isAbove is always logically consistent with altDeg > 0', () => {

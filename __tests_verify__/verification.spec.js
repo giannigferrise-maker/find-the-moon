@@ -39,6 +39,10 @@
  *   FTM-RR-004  Missing moonrise/moonset times handled gracefully
  *   FTM-UR-002  Error messages are in plain English
  *   FTM-UR-003  Update timestamp shown after location lookup
+ *   FTM-TG-001  Tilt guide button visible on mobile after location set
+ *   FTM-TG-002  Tilt indicator draws on arc regardless of moon visibility
+ *   FTM-TG-003  Tilt feedback text reflects accuracy
+ *   FTM-TG-004  Moon below horizon — message shown and tilt indicator active
  */
 
 const { test, expect } = require('@playwright/test');
@@ -205,6 +209,35 @@ async function setupAndEnterZip(page, sunCalcScript = SUNCALC_DAY) {
   await page.fill('#zip-input', '10001');
   await page.click('#zip-btn');
   await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+}
+
+/**
+ * Inject touch support into the page so isMobileDevice() returns true.
+ * DeviceOrientationEvent is already available in headless Chromium;
+ * we only need to fake the touch-screen check.
+ */
+async function mockMobileDevice(page) {
+  await page.addInitScript(() => {
+    if (!('ontouchstart' in window)) {
+      Object.defineProperty(window, 'ontouchstart', {
+        value: null, writable: true, configurable: true,
+      });
+    }
+  });
+}
+
+/**
+ * Dispatch a fake deviceorientation event with the given beta value.
+ * The tilt handler reads e.beta to update deviceBeta.
+ */
+async function dispatchTiltEvent(page, beta) {
+  await page.evaluate((b) => {
+    const event = new Event('deviceorientation');
+    Object.defineProperty(event, 'beta',  { value: b, configurable: true });
+    Object.defineProperty(event, 'alpha', { value: 0, configurable: true });
+    Object.defineProperty(event, 'gamma', { value: 0, configurable: true });
+    window.dispatchEvent(event);
+  }, beta);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1068,5 +1101,160 @@ test.describe('[FTM-UR-003] Update timestamp shown after location lookup', () =>
     await page.click('#gps-btn');
     await expect(page.locator('#results')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('#update-time')).toContainText('Updated at');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-TG-001  Tilt guide button visible on mobile after location set
+// Requirement: The tilt guide button shall be hidden until a location is
+//              resolved, and shall appear only on devices that report touch
+//              support and DeviceOrientationEvent availability.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-TG-001] Tilt guide button visible on mobile after location set', () => {
+  test('tilt-section is hidden before any location is entered', async ({ page }) => {
+    // Requirement: button must not appear until location data is available.
+    await mockMobileDevice(page);
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    await expect(page.locator('#tilt-section')).not.toHaveClass(/visible/);
+  });
+
+  test('tilt-section becomes visible after zip lookup on a mobile device', async ({ page }) => {
+    // Requirement: button appears once renderResults() runs on a mobile device.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/);
+  });
+
+  test('tilt-section stays hidden on desktop (no touch support)', async ({ page }) => {
+    // Requirement: button must not appear on devices that lack touch/orientation.
+    // No mockMobileDevice — simulates a standard desktop browser.
+    await setupAndEnterZip(page);
+    await expect(page.locator('#tilt-section')).not.toHaveClass(/visible/);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-TG-002  Tilt indicator draws on arc regardless of moon visibility
+// Requirement: The tilt indicator (dashed line and dot on the altitude arc)
+//              shall remain active and drawing whether the moon is above or
+//              below the horizon.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-TG-002] Tilt indicator draws on arc regardless of moon visibility', () => {
+  test('tilt-wrap is visible after enabling tilt guide with moon above horizon', async ({ page }) => {
+    // Requirement: tilt wrap must be shown when moon is above the horizon.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await expect(page.locator('#tilt-wrap')).toHaveClass(/visible/);
+  });
+
+  test('tilt-wrap stays visible after enabling tilt guide with moon below horizon', async ({ page }) => {
+    // Requirement: tilt wrap must remain shown even when moon is below the horizon.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_MOON_BELOW);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await expect(page.locator('#tilt-wrap')).toHaveClass(/visible/);
+  });
+
+  test('no JavaScript errors when tilt is active and moon is below the horizon', async ({ page }) => {
+    // Requirement: the below-horizon path must not throw any runtime exceptions.
+    const errors = [];
+    page.on('pageerror', err => errors.push(err.message));
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_MOON_BELOW);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await page.waitForTimeout(200);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-TG-003  Tilt feedback text reflects accuracy
+// Requirement: The feedback text shall read "✓ On target!" when device
+//              elevation is within 3° of the moon's altitude, and shall
+//              show a directional hint ("Tilt up X°" / "Tilt down X°") otherwise.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Mock moon altitude: 0.5236 rad ≈ 30° + ~0.03° refraction ≈ 30°
+// betaToElevation(60) = 30° → on target
+// betaToElevation(85) =  5° → tilt up ~25°
+// betaToElevation(20) = 70° → tilt down ~40°
+
+test.describe('[FTM-TG-003] Tilt feedback text reflects accuracy', () => {
+  test('shows "On target" when device elevation matches moon altitude (±3°)', async ({ page }) => {
+    // Requirement: feedback must be positive when phone is aimed at the moon.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await dispatchTiltEvent(page, 60); // elevation ≈ 30° = moon altitude
+    await expect(page.locator('#tilt-feedback'))
+      .toContainText(/on target/i, { timeout: 3000 });
+  });
+
+  test('shows "Tilt up" when device is pointed too low', async ({ page }) => {
+    // Requirement: directional hint must tell user to raise the phone.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await dispatchTiltEvent(page, 85); // elevation = 5°, moon at 30° → tilt up
+    await expect(page.locator('#tilt-feedback'))
+      .toContainText(/tilt up/i, { timeout: 3000 });
+  });
+
+  test('shows "Tilt down" when device is pointed too high', async ({ page }) => {
+    // Requirement: directional hint must tell user to lower the phone.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await dispatchTiltEvent(page, 20); // elevation = 70°, moon at 30° → tilt down
+    await expect(page.locator('#tilt-feedback'))
+      .toContainText(/tilt down/i, { timeout: 3000 });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-TG-004  Moon below horizon — message shown and tilt indicator active
+// Requirement: When the moon is below the horizon, the feedback shall display
+//              "Moon is below the horizon" AND the tilt indicator shall
+//              continue drawing on the arc (not hidden or frozen).
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-TG-004] Moon below horizon — message shown and tilt indicator active', () => {
+  test('feedback reads "Moon is below the horizon" when moon altitude is negative', async ({ page }) => {
+    // Requirement: the below-horizon state must be communicated clearly.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_MOON_BELOW);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await expect(page.locator('#tilt-feedback'))
+      .toContainText(/below the horizon/i, { timeout: 3000 });
+  });
+
+  test('tilt-wrap remains visible even when moon is below the horizon', async ({ page }) => {
+    // Requirement: the tilt indicator must stay active so user can practise aiming.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_MOON_BELOW);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    await expect(page.locator('#tilt-wrap')).toHaveClass(/visible/);
+  });
+
+  test('feedback does not show directional hint when moon is below the horizon', async ({ page }) => {
+    // Requirement: "Tilt up/down" is only meaningful when moon is above horizon.
+    await mockMobileDevice(page);
+    await setupAndEnterZip(page, SUNCALC_MOON_BELOW);
+    await expect(page.locator('#tilt-section')).toHaveClass(/visible/, { timeout: 3000 });
+    await page.click('#tilt-toggle-btn');
+    const text = await page.locator('#tilt-feedback').textContent({ timeout: 3000 });
+    expect(text).not.toMatch(/tilt up|tilt down/i);
   });
 });
