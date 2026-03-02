@@ -418,6 +418,15 @@
       min-height: 1em;
     }
 
+    #compass-tilt-warning {
+      font-size: 0.75rem;
+      color: #fbbf24;
+      text-align: center;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    #compass-tilt-warning.visible { display: block; }
+
     /* ─── Tilt Guide ─────────────────────────────────────────────── */
     #tilt-section {
       display: none;
@@ -559,6 +568,7 @@
           <p id="compass-hint">Rotate your phone until 🌙 lines up with the purple arrow — you're now facing the moon!</p>
         </div>
         <p id="compass-perm-note"></p>
+        <p id="compass-tilt-warning"></p>
       </div>
     </div>
 
@@ -1172,6 +1182,8 @@ function disableTiltGuide() {
   window.removeEventListener('deviceorientationabsolute', handleTiltEvent, true);
   window.removeEventListener('deviceorientation', handleTiltEvent, true);
   if (tiltAnimFrame) { cancelAnimationFrame(tiltAnimFrame); tiltAnimFrame = null; }
+  const warning = $('compass-tilt-warning');
+  if (warning) warning.classList.remove('visible');
   drawAltArc(currentMoonAltitude); // redraw arc without tilt overlay
 }
 
@@ -1204,6 +1216,16 @@ function startTiltDraw() {
         feedback.className   = absDiff < 12 ? 'close' : 'off';
       }
     }
+    const warning = $('compass-tilt-warning');
+    if (warning) {
+      if (deviceElevation > 45) {
+        warning.textContent = 'Compass not reliable above 45° tilt';
+        warning.classList.add('visible');
+      } else {
+        warning.classList.remove('visible');
+      }
+    }
+
     tiltAnimFrame = requestAnimationFrame(frame);
   }
   frame();
