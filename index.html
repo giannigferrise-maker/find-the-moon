@@ -498,6 +498,122 @@
       #app { padding: 1.5rem 1rem 2.5rem; }
       #compass-wrap { width: 150px; height: 150px; }
     }
+
+    /* ─── Feedback Footer ────────────────────────────────────────── */
+    #feedback-footer {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--card-border);
+    }
+    .feedback-btn {
+      padding: 0.55rem 1rem;
+      border: 1px solid var(--card-border);
+      border-radius: 2rem;
+      background: var(--card-bg);
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .feedback-btn:hover {
+      background: rgba(255,255,255,0.12);
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    /* ─── Feedback Modal ─────────────────────────────────────────── */
+    #feedback-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    #feedback-modal.open { display: flex; }
+    #feedback-card {
+      background: var(--bg-mid);
+      border: 1px solid var(--card-border);
+      border-radius: 1.1rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+    #feedback-card h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+    #feedback-title-input,
+    #feedback-desc-input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.7rem;
+      border: 1px solid var(--card-border);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: var(--font);
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    #feedback-title-input:focus,
+    #feedback-desc-input:focus { border-color: var(--accent); }
+    #feedback-title-input::placeholder,
+    #feedback-desc-input::placeholder { color: var(--text-dim); }
+    #feedback-desc-input { min-height: 90px; }
+    #feedback-char-count {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-align: right;
+      margin-top: -0.5rem;
+    }
+    #feedback-actions {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: flex-end;
+    }
+    #feedback-cancel {
+      padding: 0.55rem 1rem;
+      border: 1px solid var(--card-border);
+      border-radius: 0.65rem;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    #feedback-submit {
+      padding: 0.55rem 1.1rem;
+      border: none;
+      border-radius: 0.65rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #feedback-submit:hover { opacity: 0.88; }
+    #feedback-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    #feedback-status {
+      font-size: 0.85rem;
+      text-align: center;
+      min-height: 1.2em;
+      color: var(--text-dim);
+    }
+    #feedback-status.success { color: #4ade80; }
+    #feedback-status.error   { color: #f87171; }
   </style>
 </head>
 <body class="night">
@@ -602,6 +718,37 @@
 
     <div id="loc-display">Showing moon for <span id="loc-name">your location</span></div>
     <div id="update-time"></div>
+
+    <!-- Feedback footer -->
+    <div id="feedback-footer">
+      <button class="feedback-btn" data-type="feature">💡 Suggest a Feature</button>
+      <button class="feedback-btn" data-type="bug">🐛 Report a Bug</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback modal -->
+<div id="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
+  <div id="feedback-card">
+    <h2 id="feedback-modal-title"></h2>
+    <input
+      id="feedback-title-input"
+      type="text"
+      maxlength="100"
+      placeholder="Short title (required)"
+      autocomplete="off"
+    />
+    <textarea
+      id="feedback-desc-input"
+      maxlength="2000"
+      placeholder="Describe it in a bit more detail (required)"
+    ></textarea>
+    <div id="feedback-char-count">0 / 2000</div>
+    <div id="feedback-status"></div>
+    <div id="feedback-actions">
+      <button id="feedback-cancel">Cancel</button>
+      <button id="feedback-submit" disabled>Submit</button>
+    </div>
   </div>
 </div>
 
@@ -1439,6 +1586,104 @@ function drawLiveCompassCanvas(ctx, heading, moonAzimuth) {
   const h = new Date().getHours();
   const isNight = h < 6 || h >= 20;
   applyTheme(isNight);
+})();
+
+/* ================================================================
+   FEEDBACK MODAL
+================================================================ */
+(function initFeedback() {
+  const modal      = document.getElementById('feedback-modal');
+  const modalTitle = document.getElementById('feedback-modal-title');
+  const titleInput = document.getElementById('feedback-title-input');
+  const descInput  = document.getElementById('feedback-desc-input');
+  const charCount  = document.getElementById('feedback-char-count');
+  const submitBtn  = document.getElementById('feedback-submit');
+  const cancelBtn  = document.getElementById('feedback-cancel');
+  const statusEl   = document.getElementById('feedback-status');
+
+  let currentType = null;
+
+  function openModal(type) {
+    currentType = type;
+    modalTitle.textContent = type === 'feature' ? '💡 Suggest a Feature' : '🐛 Report a Bug';
+    titleInput.value = '';
+    descInput.value  = '';
+    charCount.textContent = '0 / 2000';
+    statusEl.textContent  = '';
+    statusEl.className    = '';
+    submitBtn.disabled    = true;
+    modal.classList.add('open');
+    titleInput.focus();
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    currentType = null;
+  }
+
+  function validateForm() {
+    const titleOk = titleInput.value.trim().length > 0;
+    const descOk  = descInput.value.trim().length > 0;
+    submitBtn.disabled = !(titleOk && descOk);
+  }
+
+  // Open modal from footer buttons
+  document.querySelectorAll('.feedback-btn').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.type));
+  });
+
+  // Close on cancel or backdrop click
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  // Live char count and validation
+  descInput.addEventListener('input', () => {
+    charCount.textContent = `${descInput.value.length} / 2000`;
+    validateForm();
+  });
+  titleInput.addEventListener('input', validateForm);
+
+  // Submit
+  submitBtn.addEventListener('click', async () => {
+    submitBtn.disabled = true;
+    statusEl.textContent = 'Submitting…';
+    statusEl.className   = '';
+
+    try {
+      const res = await fetch('/.netlify/functions/submit-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type:        currentType,
+          title:       titleInput.value.trim(),
+          description: descInput.value.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        statusEl.textContent = currentType === 'feature'
+          ? 'Thanks! Your suggestion has been submitted.'
+          : 'Thanks! Your bug report has been submitted.';
+        statusEl.className = 'success';
+        setTimeout(closeModal, 2000);
+      } else {
+        statusEl.textContent = 'Something went wrong. Please try again.';
+        statusEl.className   = 'error';
+        submitBtn.disabled   = false;
+      }
+    } catch {
+      statusEl.textContent = 'Network error. Please try again.';
+      statusEl.className   = 'error';
+      submitBtn.disabled   = false;
+    }
+  });
 })();
 </script>
 </body>
