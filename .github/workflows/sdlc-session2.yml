@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: sdlc/issue-${{ github.event.issue.number }}
 
       - uses: actions/setup-python@v5
         with:
@@ -26,12 +28,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create branch
-        run: |
-          BRANCH="sdlc/issue-${{ github.event.issue.number }}-code"
-          git checkout -b "$BRANCH"
-          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
       - name: Run SDLC Session 2
         env:
@@ -48,19 +44,5 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "SDLC Session 2: code implementation for issue #${{ github.event.issue.number }}"
-            git push origin "$BRANCH"
-          fi
-
-      - name: Create PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
-            gh pr create \
-              --title "SDLC: Code implementation for issue #${{ github.event.issue.number }}" \
-              --body "$(cat .github/sdlc_pr_body.md)" \
-              --base main \
-              --head "$BRANCH"
-          else
-            echo "No changes were pushed — skipping PR creation."
+            git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
