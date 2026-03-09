@@ -236,3 +236,31 @@ this setting, so a malicious fork cannot abuse the `pull-requests: write` scope.
 | 4 | Add rate limiting to feedback function | Issue #10 |
 | 5 | Run `npm audit fix` | 2 min |
 | 6 | (Optional) Prompt injection hardening | Low priority |
+
+
+## Security Review — Issue #14 Branch (SRI hash for SunCalc CDN)
+
+**Date:** 2026-03-07  
+**Reviewer:** Automated security review  
+**Scope:** Git diff of issue-14 branch vs main — changes to `__tests_verify__/verification.test.js`, `__tests_verify__/verification.spec.js`, `FTM-SRS-001.md`, `.github/scripts/sdlc_session3.py`, `.github/workflows/sdlc-session3.yml`, `.github/workflows/sdlc-session4.yml`, `.github/workflows/sdlc-session5.yml`
+
+### Verdict: PASS
+
+No critical, high, or medium findings. Five informational observations noted.
+
+### Findings Summary
+
+| Severity | Title |
+|---|---|
+| INFO | SRI test regex permits zero-length hash body (placeholder not caught) |
+| INFO | FTM-SC-002 widened to SHA-384 or SHA-512 without documented rationale |
+| INFO | Removal of self-critique loop reduces automated test QA coverage |
+| INFO | Two-dot to three-dot git diff change in session4/session5 workflows |
+| INFO | Duplicate SRI test coverage across two describe blocks |
+
+### Notes
+
+- The fix for issue #14 (SRI attributes on the SunCalc CDN tag) is structurally correct. Verification tests in both Jest and Playwright cover FTM-SC-001 through FTM-SC-004 as required by the SRS.
+- The actual `integrity` and `crossorigin` attributes must be verified in `index.html` directly (not modified in this diff). Ensure the hash in `index.html` is a real SHA-384 or SHA-512 digest of the file served by cdnjs and not a placeholder.
+- COPPA compliance is not affected by this diff — no new data collection, no new external calls.
+- No new CDN dependencies introduced.
