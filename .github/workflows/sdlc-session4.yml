@@ -1,0 +1,55 @@
+name: SDLC Session 4 — Security Review
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  security-review:
+    if: github.event.label.name == 'security-ready'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sdlc/issue-${{ github.event.issue.number }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install anthropic
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get diff against main
+        run: |
+          git fetch origin main
+          git diff origin/main...HEAD > /tmp/branch.diff
+
+      - name: Run SDLC Session 4
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: python3 .github/scripts/sdlc_session4.py
+
+      - name: Commit and push
+        run: |
+          git add docs/security-review.md
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "SDLC Session 4: security review for issue #${{ github.event.issue.number }}"
+            git push origin sdlc/issue-${{ github.event.issue.number }}
+          fi
