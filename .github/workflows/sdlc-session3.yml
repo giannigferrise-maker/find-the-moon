@@ -21,8 +21,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
         run: pip install anthropic
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
       - name: Configure git
         run: |
@@ -47,3 +57,9 @@ jobs:
             git commit -m "SDLC Session 3: automated tests for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
+
+      - name: Run Jest verification tests
+        run: npm run test:verify -- --testPathPattern=verification.test.js
+
+      - name: Run Playwright verification tests
+        run: npx playwright test --config playwright.verify.config.js __tests_verify__/verification.spec.js
