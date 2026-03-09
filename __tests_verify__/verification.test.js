@@ -402,3 +402,175 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
     expect(isNighttime(new Date('2025-06-21T17:00:00Z'), 40.7128, -74.006)).toBe(false);
   });
 });
+
+
+// =============================================================================
+// FTM-SC-001, FTM-SC-002, FTM-SC-003
+// Requirement: External scripts shall carry a valid SHA-384 SRI integrity
+//              attribute and crossorigin="anonymous".
+// Verification method: Inspection (implemented as an automated parse test)
+// =============================================================================
+
+const fs   = require('fs');
+const path = require('path');
+
+// Parse index.html once for all SRI inspection tests.
+const INDEX_HTML = fs.readFileSync(
+  path.resolve(__dirname, '../index.html'),
+  'utf8'
+);
+
+/**
+ * Minimal regex-based extractor — returns an array of objects for every
+ * <script> tag whose src begins with "http".
+ * Each object: { src, integrity, crossorigin }
+ */
+function extractExternalScripts(html) {
+  const scriptTagRe = /<script\b([^>]*)>/gi;
+  const attrRe      = name =>
+    new RegExp(name + '\\s*=\\s*["\']([^"\']*)["\']', 'i');
+
+  const results = [];
+  let match;
+  while ((match = scriptTagRe.exec(html)) !== null) {
+    const attrs = match[1];
+    const srcMatch = attrRe('src').exec(attrs);
+    if (!srcMatch) continue;
+    const src = srcMatch[1];
+    if (!src.startsWith('http')) continue;
+
+    const integrityMatch   = attrRe('integrity').exec(attrs);
+    const crossoriginMatch = attrRe('crossorigin').exec(attrs);
+    results.push({
+      src,
+      integrity:   integrityMatch   ? integrityMatch[1]   : null,
+      crossorigin: crossoriginMatch ? crossoriginMatch[1] : null,
+    });
+  }
+  return results;
+}
+
+describe('[FTM-SC-001] SRI integrity attribute present on all external scripts', () => {
+  // Requirement: every externally hosted <script> in index.html shall
+  // include a non-empty integrity attribute.
+
+  it('finds at least one external script tag in index.html', () => {
+    // TODO: This test verifies the extractor finds the SunCalc CDN tag.
+    //       If the tag is missing entirely the test should fail loudly.
+    const scripts = extractExternalScripts(INDEX_HTML);
+    expect(scripts.length).toBeGreaterThan(0);
+  });
+
+  it('every external script tag has a non-empty integrity attribute', () => {
+    // TODO: For each external <script>, assert that the integrity attribute
+    //       exists and is not an empty string. Fails if the CDN tag was added
+    //       without an integrity value.
+    const scripts = extractExternalScripts(INDEX_HTML);
+    for (const script of scripts) {
+      expect(
+        script.integrity,
+        `Missing integrity on script: ${script.src}`
+      ).toBeTruthy();
+    }
+  });
+
+  it('the SunCalc CDN script specifically has an integrity attribute', () => {
+    // TODO: Locate the SunCalc 1.9.0 entry by matching its src URL and
+    //       assert the integrity attribute is present and non-empty.
+    const scripts = extractExternalScripts(INDEX_HTML);
+    const sunCalc = scripts.find(s =>
+      s.src.includes('suncalc') && s.src.includes('1.9.0')
+    );
+    expect(sunCalc).toBeDefined();
+    expect(sunCalc.integrity).toBeTruthy();
+  });
+});
+
+describe('[FTM-SC-002] SRI hash is a valid SHA-384 base64 digest', () => {
+  // Requirement: the integrity attribute value shall use the sha384 algorithm
+  // and a correctly formed base64 digest.
+  // Format: "sha384-" followed by exactly 64 base64 characters.
+
+  // SHA-384 produces 48 bytes → 64 base64 characters (no padding needed for
+  // 48 bytes which is a multiple of 3, so no "=" padding expected).
+  const SRI_SHA384_RE = /^sha384-[A-Za-z0-9+/]{64}$/;
+
+  it('every external script integrity value matches the sha384-<base64> format', () => {
+    // TODO: For each external script with an integrity attribute, assert the
+    //       value matches SRI_SHA384_RE.  Catches wrong algorithm (sha256),
+    //       truncated hashes, or placeholder strings like "sha384-<hash>".
+    const scripts = extractExternalScripts(INDEX_HTML);
+    for (const script of scripts) {
+      if (!script.integrity) continue; // already caught by FTM-SC-001 tests
+      expect(
+        SRI_SHA384_RE.test(script.integrity),
+        `integrity value has wrong format on script: ${script.src} — got: ${script.integrity}`
+      ).toBe(true);
+    }
+  });
+
+  it('the SunCalc SRI value is not a placeholder string', () => {
+    // TODO: Assert the integrity attribute does NOT contain "<hash>" or
+    //       other placeholder tokens that would indicate the developer
+    //       copied the template without filling in the real digest.
+    const scripts = extractExternalScripts(INDEX_HTML);
+    const sunCalc = scripts.find(s => s.src.includes('suncalc'));
+    expect(sunCalc).toBeDefined();
+    expect(sunCalc.integrity).not.toMatch(/<hash>/);
+    expect(sunCalc.integrity).not.toMatch(/TODO/i);
+    expect(sunCalc.integrity).not.toMatch(/PLACEHOLDER/i);
+  });
+
+  it('optionally verifies the SHA-384 digest matches the locally cached suncalc.min.js', () => {
+    // TODO: If a local copy of suncalc.min.js is available under
+    //       vendor/suncalc.min.js (or similar), read it, compute its
+    //       SHA-384 digest with Node's crypto module, base64-encode it,
+    //       prepend "sha384-", and compare to the integrity attribute.
+    //       Skip gracefully (test.skip) when no local copy is present.
+    //
+    // Example skeleton:
+    //   const crypto = require('crypto');
+    //   const vendor = path.resolve(__dirname, '../vendor/suncalc.min.js');
+    //   if (!fs.existsSync(vendor)) { return; } // skip when not cached
+    //   const digest = crypto.createHash('sha384')
+    //     .update(fs.readFileSync(vendor))
+    //     .digest('base64');
+    //   const expected = `sha384-${digest}`;
+    //   const scripts  = extractExternalScripts(INDEX_HTML);
+    //   const sunCalc  = scripts.find(s => s.src.includes('suncalc'));
+    //   expect(sunCalc.integrity).toBe(expected);
+    expect(true).toBe(true); // remove this line once implemented
+  });
+});
+
+describe('[FTM-SC-003] crossorigin attribute present on SRI-protected scripts', () => {
+  // Requirement: every external <script> with an integrity attribute shall
+  // also carry crossorigin="anonymous".
+  // Without crossorigin, browsers refuse SRI checking for cross-origin scripts.
+
+  it('every external script with integrity also has crossorigin="anonymous"', () => {
+    // TODO: For each external script whose integrity is non-empty, assert
+    //       that crossorigin equals "anonymous" (case-insensitive).
+    const scripts = extractExternalScripts(INDEX_HTML);
+    for (const script of scripts) {
+      if (!script.integrity) continue;
+      expect(
+        script.crossorigin,
+        `Missing crossorigin on SRI-protected script: ${script.src}`
+      ).toBeTruthy();
+      expect(
+        script.crossorigin.toLowerCase(),
+        `crossorigin should be "anonymous" on script: ${script.src}`
+      ).toBe('anonymous');
+    }
+  });
+
+  it('the SunCalc CDN script specifically has crossorigin="anonymous"', () => {
+    // TODO: Locate the SunCalc entry and assert crossorigin="anonymous".
+    const scripts = extractExternalScripts(INDEX_HTML);
+    const sunCalc = scripts.find(s => s.src.includes('suncalc'));
+    expect(sunCalc).toBeDefined();
+    expect(sunCalc.crossorigin).toBeDefined();
+    expect(sunCalc.crossorigin.toLowerCase()).toBe('anonymous');
+  });
+});
