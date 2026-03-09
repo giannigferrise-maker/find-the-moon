@@ -92,7 +92,7 @@ client = anthropic.Anthropic()
 
 message = client.messages.create(
     model='claude-sonnet-4-6',
-    max_tokens=4096,
+    max_tokens=8192,
     messages=[{'role': 'user', 'content': prompt}],
 )
 
@@ -104,7 +104,13 @@ end   = response_text.rfind('}') + 1
 if start < 0 or end <= start:
     raise ValueError(f"No JSON found in response:\n{response_text[:500]}")
 
-data = json.loads(response_text[start:end])
+try:
+    data = json.loads(response_text[start:end])
+except json.JSONDecodeError as e:
+    print(f"JSON parse error: {e}")
+    print(f"Response length: {len(response_text)}, stop_reason: {message.stop_reason}")
+    print(f"Response tail: {response_text[-300:]}")
+    raise
 
 # ── write changes ──────────────────────────────────────────────────────────────
 
