@@ -6,7 +6,7 @@ on:
 
 jobs:
   requirements-and-tests:
-    if: github.event.label.name == 'approved'
+    if: github.event.label.name == 'reqs-ready'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,7 +29,7 @@ jobs:
 
       - name: Create branch
         run: |
-          BRANCH="sdlc/issue-${{ github.event.issue.number }}-requirements"
+          BRANCH="sdlc/issue-${{ github.event.issue.number }}"
           git checkout -b "$BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
@@ -49,20 +49,21 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "SDLC Session 1: requirements and tests for issue #${{ github.event.issue.number }}"
+            git commit -m "SDLC Session 1: requirements and test stubs for issue #${{ github.event.issue.number }}"
             git push origin "$BRANCH"
           fi
 
-      - name: Create PR
+      - name: Open draft PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
             gh pr create \
-              --title "SDLC: Requirements & tests for issue #${{ github.event.issue.number }}" \
+              --title "SDLC issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
               --body "$(cat .github/sdlc_pr_body.md)" \
               --base main \
-              --head "$BRANCH"
+              --head "$BRANCH" \
+              --draft
           else
             echo "No changes were pushed — skipping PR creation."
           fi
