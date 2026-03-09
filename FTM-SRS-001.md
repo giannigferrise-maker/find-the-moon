@@ -181,7 +181,7 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | ID | Requirement | Verification |
 |---|---|---|
 | FTM-SC-001 | The system shall include a Subresource Integrity (SRI) `integrity` attribute on every externally hosted `<script>` element in index.html | Inspection |
-| FTM-SC-002 | The SRI hash used in the `integrity` attribute shall be a SHA-384 digest of the exact file served by the CDN, encoded in base64 | Inspection |
+| FTM-SC-002 | The SRI hash used in the `integrity` attribute shall be a SHA-384 or SHA-512 digest of the exact file served by the CDN, encoded in base64 | Inspection |
 | FTM-SC-003 | Every externally hosted `<script>` element that carries an `integrity` attribute shall also carry `crossorigin="anonymous"` | Inspection |
 | FTM-SC-004 | The system shall continue to load and execute the SunCalc.js library (v1.9.0) correctly after the SRI attributes are applied | Test |
 

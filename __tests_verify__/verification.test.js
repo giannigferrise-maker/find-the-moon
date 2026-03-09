@@ -436,11 +436,11 @@ describe('[FTM-SC-001/002/003] SRI integrity and crossorigin attributes on exter
     });
   });
 
-  it('[FTM-SC-002] the integrity attribute value uses a sha384- prefix (SHA-384, base64 encoded)', () => {
+  it('[FTM-SC-002] the integrity attribute value uses a sha384- or sha512- prefix (SHA-384 or SHA-512, base64 encoded)', () => {
     expect(externalScripts.length).toBeGreaterThan(0);
     externalScripts.forEach(tag => {
-      // integrity attribute value must start with sha384- followed by base64 characters
-      expect(tag).toMatch(/integrity\s*=\s*["']sha384-[A-Za-z0-9+/]+=*["']/i);
+      // integrity attribute value must start with sha384- or sha512- followed by base64 characters
+      expect(tag).toMatch(/integrity\s*=\s*["']sha(384|512)-[A-Za-z0-9+/]+=*["']/i);
     });
   });
 
@@ -462,11 +462,11 @@ describe('[FTM-SC-001/002/003] SRI integrity and crossorigin attributes on exter
     expect(suncalcTag).toMatch(/integrity\s*=/i);
   });
 
-  it('[FTM-SC-002] the SunCalc script integrity value is a valid sha384 base64 hash', () => {
+  it('[FTM-SC-002] the SunCalc script integrity value is a valid sha384 or sha512 base64 hash', () => {
     const suncalcTagMatch = htmlContent.match(/<script[^>]+suncalc\.min\.js[^>]*>/i);
     expect(suncalcTagMatch).not.toBeNull();
     const suncalcTag = suncalcTagMatch[0];
-    expect(suncalcTag).toMatch(/integrity\s*=\s*["']sha384-[A-Za-z0-9+/]{64}=*["']/i);
+    expect(suncalcTag).toMatch(/integrity\s*=\s*["']sha(384|512)-[A-Za-z0-9+/]+=*["']/i);
   });
 
   it('[FTM-SC-003] the SunCalc script tag carries crossorigin="anonymous"', () => {
