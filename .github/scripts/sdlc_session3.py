@@ -11,10 +11,33 @@ requirements, not against what the code happens to do today.
 """
 
 import os
+import re
 import json
 import anthropic
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+def extract_json(text, message=None):
+    """Extract and parse JSON from Claude's response, repairing common issues."""
+    start = text.find('{')
+    end   = text.rfind('}') + 1
+    if start < 0 or end <= start:
+        raise ValueError(f"No JSON found in response:\n{text[:500]}")
+    json_str = text[start:end]
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+    cleaned = re.sub(r'//[^\n]*', '', json_str)
+    cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        stop = message.stop_reason if message else 'unknown'
+        print(f"JSON parse error after repair attempt: {e}")
+        print(f"stop_reason: {stop}, response length: {len(text)}")
+        print(f"First 500 chars of extracted JSON:\n{json_str[:500]}")
+        raise
 
 def read_file(path, max_chars=None):
     try:
@@ -107,20 +130,7 @@ message = client.messages.create(
 )
 
 response_text = message.content[0].text
-
-# Extract JSON
-start = response_text.find('{')
-end   = response_text.rfind('}') + 1
-if start < 0 or end <= start:
-    raise ValueError(f"No JSON found in response:\n{response_text[:500]}")
-
-try:
-    data = json.loads(response_text[start:end])
-except json.JSONDecodeError as e:
-    print(f"JSON parse error: {e}")
-    print(f"Response length: {len(response_text)}, stop_reason: {message.stop_reason}")
-    print(f"Response tail: {response_text[-300:]}")
-    raise
+data = extract_json(response_text, message)
 
 # ── apply replacements ────────────────────────────────────────────────────────
 
