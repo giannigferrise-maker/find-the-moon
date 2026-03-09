@@ -89,6 +89,7 @@ export async function onRequestPost(context) {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json',
+        'User-Agent': 'find-the-moon-app',
         'X-GitHub-Api-Version': '2022-11-28',
       },
       body: JSON.stringify({
@@ -101,7 +102,7 @@ export async function onRequestPost(context) {
     if (!response.ok) {
       const errText = await response.text();
       console.error('GitHub API error:', response.status, errText);
-      return new Response(JSON.stringify({ error: 'Failed to create issue', debug_status: response.status, debug_body: errText }), {
+      return new Response(JSON.stringify({ error: 'Failed to create issue' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
