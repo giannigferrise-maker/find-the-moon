@@ -53,6 +53,38 @@ def append_to_file(path, text):
     with open(path, 'a', encoding='utf-8') as f:
         f.write('\n\n' + text.strip() + '\n')
 
+def add_closes_to_pr(repo, issue_number, token, pr_number):
+    """Append 'Closes #N' to the PR body so the issue auto-closes on merge."""
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_number}"
+    req = urllib.request.Request(url, headers={
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'find-the-moon-sdlc',
+        'X-GitHub-Api-Version': '2022-11-28',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            pr = json.loads(resp.read())
+        current_body = pr.get('body', '') or ''
+        closes_line = f"\nCloses #{issue_number}"
+        if closes_line.strip() in current_body:
+            print(f"PR #{pr_number} body already contains 'Closes #{issue_number}'.")
+            return
+        updated_body = current_body + closes_line
+        payload = json.dumps({'body': updated_body}).encode('utf-8')
+        patch_req = urllib.request.Request(url, data=payload, method='PATCH', headers={
+            'Authorization': f'Bearer {token}',
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'User-Agent': 'find-the-moon-sdlc',
+            'X-GitHub-Api-Version': '2022-11-28',
+        })
+        with urllib.request.urlopen(patch_req, timeout=15) as resp:
+            print(f"Added 'Closes #{issue_number}' to PR #{pr_number} body.")
+    except urllib.error.URLError as e:
+        print(f"Could not update PR body: {e}")
+
+
 def post_pr_comment(repo, issue_number, token, body):
     url = f"https://api.github.com/repos/{repo}/pulls?head={repo.split('/')[0]}:sdlc/issue-{issue_number}&state=open"
     req = urllib.request.Request(url, headers={
@@ -66,11 +98,11 @@ def post_pr_comment(repo, issue_number, token, body):
             prs = json.loads(resp.read())
         if not prs:
             print("No open PR found for this branch — skipping comment.")
-            return
+            return None
         pr_number = prs[0]['number']
     except urllib.error.URLError as e:
         print(f"Could not find PR: {e}")
-        return
+        return None
 
     comment_url = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     payload = json.dumps({'body': body}).encode('utf-8')
@@ -84,8 +116,10 @@ def post_pr_comment(repo, issue_number, token, body):
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             print(f"Posted quality review comment to PR #{pr_number}")
+            return pr_number
     except urllib.error.URLError as e:
         print(f"Could not post PR comment: {e}")
+        return None
 
 # ── context ───────────────────────────────────────────────────────────────────
 
@@ -190,7 +224,9 @@ pr_comment = data.get('pr_comment', '')
 if pr_comment and token and repo:
     badge = '✅ PASS' if verdict == 'PASS' else '❌ FAIL'
     full_comment = f"## 📋 SDLC Session 5 — Quality Review: {badge}\n\n{pr_comment}"
-    post_pr_comment(repo, issue_number, token, full_comment)
+    pr_number = post_pr_comment(repo, issue_number, token, full_comment)
+    if verdict == 'PASS' and pr_number:
+        add_closes_to_pr(repo, issue_number, token, pr_number)
 
 print(f"Quality review verdict: {verdict}")
 print("Done.")

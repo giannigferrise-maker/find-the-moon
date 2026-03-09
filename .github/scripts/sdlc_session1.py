@@ -159,8 +159,6 @@ if not changes:
 
 pr_body = f"""## SDLC Session 1: Requirements & Tests
 
-Closes #{issue_number}
-
 ## Summary
 {pr_summary}
 
