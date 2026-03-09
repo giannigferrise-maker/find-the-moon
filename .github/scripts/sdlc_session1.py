@@ -1,0 +1,163 @@
+"""
+SDLC Session 1 — Requirements & Tests
+Triggered by the 'approved' label on a GitHub issue.
+
+Reads the issue + existing SRS and traceability matrix, calls Claude to
+propose new requirements, traceability entries, and test stubs, then writes
+the changes back to disk for the workflow to commit and PR.
+"""
+
+import os
+import json
+import anthropic
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def read_file(path, max_chars=None):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return content[:max_chars] if max_chars else content
+    except FileNotFoundError:
+        return ''
+
+def append_to_file(path, text):
+    if not text.strip():
+        return
+    with open(path, 'a', encoding='utf-8') as f:
+        f.write('\n\n' + text.strip() + '\n')
+
+def write_file(path, content):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+# ── context ───────────────────────────────────────────────────────────────────
+
+issue_number = os.environ['ISSUE_NUMBER']
+issue_title  = os.environ['ISSUE_TITLE']
+issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
+
+srs_content           = read_file('FTM-SRS-001.md', max_chars=10000)
+traceability_content  = read_file('traceability-matrix.txt', max_chars=6000)
+jest_example          = read_file('__tests_verify__/verification.test.js', max_chars=3000)
+playwright_example    = read_file('__tests_verify__/verification.spec.js', max_chars=3000)
+
+# ── prompt ────────────────────────────────────────────────────────────────────
+
+prompt = f"""You are a software requirements and test engineer for the "Find the Moon" web \
+application — a browser-based tool showing users where the moon is, intended for general \
+public use including children.
+
+A GitHub issue has been approved for implementation:
+
+Issue #{issue_number}: {issue_title}
+{issue_body}
+
+--- Current SRS (FTM-SRS-001.md, first 10 000 chars) ---
+{srs_content}
+
+--- Current Traceability Matrix (first 6 000 chars) ---
+{traceability_content}
+
+--- Example Jest test format (verification.test.js excerpt) ---
+{jest_example}
+
+--- Example Playwright test format (verification.spec.js excerpt) ---
+{playwright_example}
+
+Your tasks:
+1. Decide whether this issue requires new SRS requirements. If yes, draft them in INCOSE \
+format (shall/should, unique IDs continuing from the last used ID, same table style as \
+the existing SRS).
+2. Draft new traceability matrix entries for any new requirements, following the exact \
+plain-text format used in the existing matrix.
+3. Write test stubs for new/affected requirements:
+   - Logic tests (pure JS functions, no browser) → Jest style matching verification.test.js
+   - UI/browser tests → Playwright style matching verification.spec.js
+   - Use TODO comments for the test body so an engineer knows what to implement.
+4. Write a 2–3 sentence PR summary.
+
+Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
+{{
+  "srs_additions": "markdown to append to FTM-SRS-001.md, or empty string",
+  "traceability_additions": "plain-text entries to append to traceability-matrix.txt, or empty string",
+  "jest_additions": "Jest test code to append to verification.test.js, or empty string",
+  "playwright_additions": "Playwright test code to append to verification.spec.js, or empty string",
+  "pr_summary": "2–3 sentence summary of the changes"
+}}"""
+
+# ── call Claude ───────────────────────────────────────────────────────────────
+
+client = anthropic.Anthropic()
+
+message = client.messages.create(
+    model='claude-sonnet-4-6',
+    max_tokens=4096,
+    messages=[{'role': 'user', 'content': prompt}],
+)
+
+response_text = message.content[0].text
+
+# Extract JSON (Claude sometimes wraps in markdown fences despite the instruction)
+start = response_text.find('{')
+end   = response_text.rfind('}') + 1
+if start < 0 or end <= start:
+    raise ValueError(f"No JSON found in response:\n{response_text[:500]}")
+
+data = json.loads(response_text[start:end])
+
+# ── write changes ──────────────────────────────────────────────────────────────
+
+if data.get('srs_additions', '').strip():
+    append_to_file('FTM-SRS-001.md', data['srs_additions'])
+    print("Updated FTM-SRS-001.md")
+
+if data.get('traceability_additions', '').strip():
+    append_to_file('traceability-matrix.txt', data['traceability_additions'])
+    print("Updated traceability-matrix.txt")
+
+if data.get('jest_additions', '').strip():
+    append_to_file('__tests_verify__/verification.test.js', data['jest_additions'])
+    print("Updated verification.test.js")
+
+if data.get('playwright_additions', '').strip():
+    append_to_file('__tests_verify__/verification.spec.js', data['playwright_additions'])
+    print("Updated verification.spec.js")
+
+# ── write PR body ──────────────────────────────────────────────────────────────
+
+pr_summary = data.get('pr_summary', f'SDLC Session 1 output for issue #{issue_number}.')
+
+changes = []
+if data.get('srs_additions', '').strip():
+    changes.append('- Updated `FTM-SRS-001.md` with new requirements')
+if data.get('traceability_additions', '').strip():
+    changes.append('- Updated `traceability-matrix.txt` with new traceability entries')
+if data.get('jest_additions', '').strip():
+    changes.append('- Added Jest test stubs to `__tests_verify__/verification.test.js`')
+if data.get('playwright_additions', '').strip():
+    changes.append('- Added Playwright test stubs to `__tests_verify__/verification.spec.js`')
+if not changes:
+    changes.append('- No document changes required for this issue')
+
+pr_body = f"""## SDLC Session 1: Requirements & Tests
+
+Closes #{issue_number}
+
+## Summary
+{pr_summary}
+
+## Changes
+{chr(10).join(changes)}
+
+## Review checklist
+- [ ] New requirements are correctly numbered and follow INCOSE format
+- [ ] Traceability entries map to the correct test files
+- [ ] Test stubs cover all new/affected requirements
+- [ ] No existing requirements or tests were accidentally modified
+
+🤖 Generated by SDLC Session 1 GitHub Action
+"""
+
+write_file('.github/sdlc_pr_body.md', pr_body)
+print("Done.")
