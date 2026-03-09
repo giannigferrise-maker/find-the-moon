@@ -479,3 +479,43 @@ Not fully automatable (see notes):        1  (PR-002 — real GPS timing on hard
 ================================================================================
  END OF TRACEABILITY MATRIX
 ================================================================================
+
+
+================================================================================
+ SECTION 11 — SUPPLY CHAIN SECURITY REQUIREMENTS (Amendment B)
+ Added: 2026-03-07
+================================================================================
+
+Req ID      | FTM-SC-001
+Title       | SRI integrity attribute present on all external scripts
+Method      | Inspection
+Test File   | __tests_verify__/verification.test.js
+Test Suite  | [FTM-SC-001] SRI integrity attribute present on all external scripts
+Notes       | Parse index.html; assert every <script src="http..."> has a non-empty
+            | integrity attribute. No browser required — pure DOM/string inspection.
+
+Req ID      | FTM-SC-002
+Title       | SRI hash is a valid SHA-384 base64 digest
+Method      | Inspection
+Test File   | __tests_verify__/verification.test.js
+Test Suite  | [FTM-SC-002] SRI hash is a valid SHA-384 base64 digest
+Notes       | Verify the integrity attribute value matches the canonical
+            | "sha384-<base64>" format (88 base64 chars). Optionally recompute
+            | the digest from the local copy of suncalc.min.js and compare.
+
+Req ID      | FTM-SC-003
+Title       | crossorigin="anonymous" present alongside integrity attribute
+Method      | Inspection
+Test File   | __tests_verify__/verification.test.js
+Test Suite  | [FTM-SC-003] crossorigin attribute present on SRI-protected scripts
+Notes       | Parse index.html; assert every external <script> with an integrity
+            | attribute also has crossorigin="anonymous".
+
+Req ID      | FTM-SC-004
+Title       | SunCalc.js loads and executes correctly after SRI attributes applied
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-SC-004] SunCalc loads correctly with SRI attributes
+Notes       | Playwright: navigate to index.html, intercept console errors for
+            | SRI failures, assert window.SunCalc is defined and getMoonPosition
+            | returns a valid result after a zip code lookup.

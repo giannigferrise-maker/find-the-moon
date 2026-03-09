@@ -173,3 +173,17 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 > **Note on version history:**
 > v1.0 (Feb 20, 2026) — Original release, 46 requirements
 > v1.1 (Mar 7, 2026) — Added Amendment A (FTM-TG-001 through FTM-TG-004); converted to Markdown from FTM-SRS-001.docx
+
+
+## 11. Amendment B — Supply Chain Security Requirements
+*Added: 2026-03-07*
+
+| ID | Requirement | Verification |
+|---|---|---|
+| FTM-SC-001 | The system shall include a Subresource Integrity (SRI) `integrity` attribute on every externally hosted `<script>` element in index.html | Inspection |
+| FTM-SC-002 | The SRI hash used in the `integrity` attribute shall be a SHA-384 digest of the exact file served by the CDN, encoded in base64 | Inspection |
+| FTM-SC-003 | Every externally hosted `<script>` element that carries an `integrity` attribute shall also carry `crossorigin="anonymous"` | Inspection |
+| FTM-SC-004 | The system shall continue to load and execute the SunCalc.js library (v1.9.0) correctly after the SRI attributes are applied | Test |
+
+> **Note on version history:**
+> v1.2 (Mar 7, 2026) — Added Amendment B (FTM-SC-001 through FTM-SC-004); total requirements now 54
