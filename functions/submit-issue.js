@@ -101,7 +101,7 @@ export async function onRequestPost(context) {
     if (!response.ok) {
       const errText = await response.text();
       console.error('GitHub API error:', response.status, errText);
-      return new Response(JSON.stringify({ error: 'Failed to create issue' }), {
+      return new Response(JSON.stringify({ error: 'Failed to create issue', debug_status: response.status, debug_body: errText }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
       });
