@@ -142,3 +142,83 @@ else:
         apply_replacement(r['file'], r['old_string'], r['new_string'])
 
 print(data.get('summary', 'Done.'))
+
+# ── self-critique loop ────────────────────────────────────────────────────────
+# After generating tests, ask Claude to review them for common mistakes and
+# apply fixes. Runs up to MAX_CRITIQUE_ROUNDS rounds.
+
+MAX_CRITIQUE_ROUNDS = 2
+
+for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
+    print(f"\nSelf-critique round {round_num}...")
+
+    jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=15000)
+    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=15000)
+
+    critique_prompt = f"""You are a senior test engineer reviewing freshly generated test code \
+for the "Find the Moon" web application.
+
+Review the two test files below for the following defects ONLY (ignore style preferences):
+
+JEST defects to look for:
+- `expect(value, "message")` — Jest does NOT support a second argument to `expect()`. \
+  Remove any message argument.
+- `describe(...)` used at top level instead of being inside a `describe` block — fine as-is, but \
+  watch for nested `describe` calls that should be `it` or `test`.
+- Missing `await` before async Playwright-style calls inside Jest (should not appear in Jest file).
+- Orphaned closing braces `}});` or `});` that don't match any open block.
+
+PLAYWRIGHT defects to look for:
+- `describe(...)` instead of `test.describe(...)`.
+- `it(...)` instead of `test(...)`.
+- Missing `async` on test callbacks that use `await`.
+- Missing `await` before `page.*` calls.
+- Orphaned closing braces that don't match any open block.
+
+BOTH files:
+- Unterminated strings or template literals.
+- Any `TODO` that was supposed to be replaced but wasn't.
+
+--- verification.test.js ---
+{jest_after}
+
+--- verification.spec.js ---
+{playwright_after}
+
+If you find NO defects, return:
+{{"fixes": [], "critique_summary": "No defects found."}}
+
+If you find defects, return a JSON object with fix replacements:
+{{
+  "fixes": [
+    {{
+      "file": "__tests_verify__/verification.test.js or __tests_verify__/verification.spec.js",
+      "old_string": "exact verbatim text to replace",
+      "new_string": "corrected replacement"
+    }}
+  ],
+  "critique_summary": "brief description of what was fixed"
+}}
+
+Return ONLY valid JSON — no markdown fences, no preamble.
+"""
+
+    critique_msg = client.messages.create(
+        model='claude-sonnet-4-6',
+        max_tokens=4096,
+        messages=[{'role': 'user', 'content': critique_prompt}],
+    )
+
+    critique_text = critique_msg.content[0].text
+    critique_data = extract_json(critique_text, critique_msg)
+
+    fixes = critique_data.get('fixes', [])
+    print(f"Critique: {critique_data.get('critique_summary', '')}")
+
+    if not fixes:
+        print("No defects found — stopping critique loop.")
+        break
+
+    for fix in fixes:
+        apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
+    print(f"Applied {len(fixes)} fix(es) from critique round {round_num}.")
