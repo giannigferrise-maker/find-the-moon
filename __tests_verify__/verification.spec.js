@@ -1267,7 +1267,7 @@ test.describe('[FTM-TG-004] Moon below horizon — message shown and tilt indica
 // Verification method: Test (Playwright — browser)
 // =============================================================================
 
-describe('[FTM-SC-004] SunCalc loads correctly with SRI attributes', () => {
+test.describe('[FTM-SC-004] SunCalc loads correctly with SRI attributes', () => {
   // These tests exercise the real index.html in a Chromium browser to confirm
   // that the SRI-protected CDN tag does not break page functionality.
   // They complement the inspection-level Jest tests (FTM-SC-001/002/003).
