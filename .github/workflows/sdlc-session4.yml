@@ -32,7 +32,7 @@ jobs:
       - name: Get diff against main
         run: |
           git fetch origin main
-          git diff origin/main...HEAD > /tmp/branch.diff
+          git diff origin/main..HEAD > /tmp/branch.diff
 
       - name: Run SDLC Session 4
         env:
