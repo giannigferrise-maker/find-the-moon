@@ -6,7 +6,7 @@ on:
 
 jobs:
   requirements-and-tests:
-    if: github.event.label.name == 'reqs-ready'
+    if: github.event.label.name == '1-reqs-ready'
     runs-on: ubuntu-latest
     permissions:
       contents: write

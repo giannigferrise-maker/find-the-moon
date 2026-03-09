@@ -6,7 +6,7 @@ on:
 
 jobs:
   quality-review:
-    if: github.event.label.name == 'quality-ready'
+    if: github.event.label.name == '5-quality-ready'
     runs-on: ubuntu-latest
     permissions:
       contents: write
