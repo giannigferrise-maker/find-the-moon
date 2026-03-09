@@ -72,6 +72,7 @@ Implement the changes required by the issue. Follow these rules:
 - Do not add comments or docstrings to code you did not change
 - Do not introduce new dependencies
 - If the fix is only in index.html, leave moonLogic.js empty. Vice versa.
+- Do NOT generate, compute, or guess any cryptographic hash values (SHA-256, SHA-384, SHA-512, etc.). If a hash is required, insert a TODO placeholder such as `TODO: compute and insert correct hash` so the human reviewer knows to fill it in.
 
 Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
 {{
