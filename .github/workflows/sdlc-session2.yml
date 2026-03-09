@@ -6,7 +6,7 @@ on:
 
 jobs:
   code-implementation:
-    if: github.event.label.name == 'code-ready'
+    if: github.event.label.name == '2-code-ready'
     runs-on: ubuntu-latest
     permissions:
       contents: write
