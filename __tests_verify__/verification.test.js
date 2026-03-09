@@ -387,6 +387,98 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
     expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
   });
 
+  it('identifies day when sun altitude is 0° (on the horizon)', () => {
+    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(0) });
+    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
+  });
+
+  it('identifies day when sun altitude is positive (sun above horizon)', () => {
+    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(45) });
+    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
+  });
+
+  it('returns false (day) for real solar noon conditions in New York in summer', () => {
+    // Integration: real SunCalc; 17:00 UTC = 13:00 EDT in July
+    expect(isNighttime(new Date('2025-07-15T17:00:00Z'), 40.7128, -74.006)).toBe(false);
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-SC-001, FTM-SC-002, FTM-SC-003, FTM-SC-004
+// Requirement FTM-SC-001: Every externally hosted <script> element shall include
+//              an integrity attribute.
+// Requirement FTM-SC-002: The SRI hash shall be a SHA-384 digest encoded in base64.
+// Requirement FTM-SC-003: Every externally hosted <script> with integrity shall
+//              also carry crossorigin="anonymous".
+// Requirement FTM-SC-004: The SunCalc.js library shall continue to load and execute.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-SC-001/002/003] SRI integrity and crossorigin attributes on external scripts', () => {
+  const fs = require('fs');
+  const path = require('path');
+
+  let htmlContent;
+  let externalScripts;
+
+  beforeAll(() => {
+    const htmlPath = path.resolve(__dirname, '../index.html');
+    htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+    // Parse all <script> tags that have an external src attribute
+    const scriptTagRegex = /<script[^>]+src=["'][^"']*:\/\/[^"']+["'][^>]*>/gi;
+    externalScripts = htmlContent.match(scriptTagRegex) || [];
+  });
+
+  it('[FTM-SC-001] every externally hosted <script> element has an integrity attribute', () => {
+    expect(externalScripts.length).toBeGreaterThan(0);
+    externalScripts.forEach(tag => {
+      expect(tag).toMatch(/integrity\s*=/i);
+    });
+  });
+
+  it('[FTM-SC-002] the integrity attribute value uses a sha384- prefix (SHA-384, base64 encoded)', () => {
+    expect(externalScripts.length).toBeGreaterThan(0);
+    externalScripts.forEach(tag => {
+      // integrity attribute value must start with sha384- followed by base64 characters
+      expect(tag).toMatch(/integrity\s*=\s*["']sha384-[A-Za-z0-9+/]+=*["']/i);
+    });
+  });
+
+  it('[FTM-SC-003] every externally hosted <script> with an integrity attribute also has crossorigin="anonymous"', () => {
+    expect(externalScripts.length).toBeGreaterThan(0);
+    externalScripts.forEach(tag => {
+      if (/integrity\s*=/i.test(tag)) {
+        expect(tag).toMatch(/crossorigin\s*=\s*["']anonymous["']/i);
+      }
+    });
+  });
+
+  it('[FTM-SC-001] the SunCalc CDN script tag specifically carries an integrity attribute', () => {
+    expect(htmlContent).toMatch(/suncalc\.min\.js/);
+    // Find the suncalc script tag
+    const suncalcTagMatch = htmlContent.match(/<script[^>]+suncalc\.min\.js[^>]*>/i);
+    expect(suncalcTagMatch).not.toBeNull();
+    const suncalcTag = suncalcTagMatch[0];
+    expect(suncalcTag).toMatch(/integrity\s*=/i);
+  });
+
+  it('[FTM-SC-002] the SunCalc script integrity value is a valid sha384 base64 hash', () => {
+    const suncalcTagMatch = htmlContent.match(/<script[^>]+suncalc\.min\.js[^>]*>/i);
+    expect(suncalcTagMatch).not.toBeNull();
+    const suncalcTag = suncalcTagMatch[0];
+    expect(suncalcTag).toMatch(/integrity\s*=\s*["']sha384-[A-Za-z0-9+/]{64}=*["']/i);
+  });
+
+  it('[FTM-SC-003] the SunCalc script tag carries crossorigin="anonymous"', () => {
+    const suncalcTagMatch = htmlContent.match(/<script[^>]+suncalc\.min\.js[^>]*>/i);
+    expect(suncalcTagMatch).not.toBeNull();
+    const suncalcTag = suncalcTagMatch[0];
+    expect(suncalcTag).toMatch(/crossorigin\s*=\s*["']anonymous["']/i);
+  });
+});pyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(-5) });
+    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
+  });
+
   it('identifies day when sun is on the horizon (0°)', () => {
     jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: 0 });
     expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
