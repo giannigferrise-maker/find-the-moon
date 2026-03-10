@@ -439,11 +439,16 @@ the "Find the Moon" web app is failing after code changes were applied for issue
 --- Current unit test files ---
 {unit_tests_block}
 
-Your task: fix the failures. Follow these rules:
-- Prefer fixing the SOURCE CODE (index.html or src/moonLogic.js) if the implementation is wrong
-- Fix a TEST only if the test itself is incorrect (e.g. it tests the old behaviour that was
-  intentionally changed by this issue, or the test was newly generated and has a bug)
-- Do NOT change tests that are catching a real bug in the new code — fix the code instead
+Your task: fix the failures by fixing the SOURCE CODE. Follow these rules strictly:
+- ALWAYS fix src/moonLogic.js or index.html first. A failing test means the code is wrong.
+- NEVER modify an existing test to make it pass. Tests are the source of truth.
+- The ONE exception: a test that was added earlier in THIS same session (it will be obvious
+  because it tests behaviour introduced by this exact issue) may be corrected if it contains
+  a factual error in the assertion logic itself (e.g. wrong expected value due to a math
+  mistake in the test). Even then, only fix the assertion value — never delete or weaken
+  the test.
+- If you cannot fix the code to satisfy the test, return an empty replacements array and
+  explain why in fix_summary — do NOT touch the test as a workaround.
 - Make the minimal change to get the tests passing
 - Do not refactor, do not add new tests, do not change passing tests
 - Match existing code style exactly
