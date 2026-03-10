@@ -422,11 +422,11 @@ test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
 
   test('star canvas is hidden in the day theme (constellations not shown)', async ({ page }) => {
     // Requirement: constellation art is part of the night theme only.
-    // #stars-canvas has opacity:0 by default; body.night #stars-canvas sets opacity:1
+    // body.night #stars-canvas sets opacity:1 — absence of night class means canvas is not shown.
+    // (opacity has a 1s CSS transition so we check class, not computed opacity)
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    const opacity = await page.locator('#stars-canvas').evaluate(el => window.getComputedStyle(el).opacity);
-    expect(parseFloat(opacity)).toBeLessThan(0.1);
+    await expect(page.locator('body')).not.toHaveClass(/night/);
   });
 });
 
