@@ -16,9 +16,13 @@ import anthropic
 
 def extract_json(text, message=None):
     """Extract and parse JSON from Claude's response, repairing common issues."""
-    start = text.find('{')
+    # Search for { followed by whitespace then a quote — skips { inside code blocks
+    match = re.search(r'\{[\s\n]*"', text)
+    if not match:
+        raise ValueError(f"No JSON found in response:\n{text[:500]}")
+    start = match.start()
     end   = text.rfind('}') + 1
-    if start < 0 or end <= start:
+    if end <= start:
         raise ValueError(f"No JSON found in response:\n{text[:500]}")
     json_str = text[start:end]
     try:
