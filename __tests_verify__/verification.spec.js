@@ -48,7 +48,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-const INDEX_URL = `file://${path.resolve(__dirname, '../index.html')}`;
+const INDEX_URL = 'http://localhost:3999/index.html';
 
 // ── SunCalc mock scripts ───────────────────────────────────────────────────
 // Served in place of the CDN suncalc.min.js for deterministic test results.
@@ -149,9 +149,18 @@ const ZIP_API_BODY = JSON.stringify({
 
 /** Intercept the SunCalc CDN request and serve a controlled mock. */
 async function routeSunCalc(page, script) {
-  await page.route('**/suncalc.min.js', route =>
-    route.fulfill({ contentType: 'application/javascript', body: script })
-  );
+  // Inject SunCalc mock via addInitScript so it runs before any page script.
+  // This bypasses SRI checking (which blocks the CDN script when Playwright
+  // serves a different payload) by pre-defining window.SunCalc before the
+  // CDN script tag is even parsed.
+  await page.addInitScript(scriptContent => {
+    // eval the mock script string to populate window.SunCalc
+    // eslint-disable-next-line no-eval
+    eval(scriptContent);
+  }, script);
+  // Also route the CDN request to abort it (prevents the CDN script from
+  // overwriting our mock if it somehow loads despite SRI).
+  await page.route('**/suncalc.min.js', route => route.abort());
 }
 
 /** Intercept the Zippopotam.us fetch and return a fixed NYC payload. */
