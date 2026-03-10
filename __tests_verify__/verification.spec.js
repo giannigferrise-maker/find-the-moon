@@ -461,10 +461,9 @@ test.describe('[FTM-FR-033] Animated clouds rendered at day with lavender color'
     // Requirement: clouds are a daytime theme element only.
     await setupAndEnterZip(page, SUNCALC_NIGHT);
     await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
-    // .clouds has opacity:0 by default; body.day .clouds sets opacity:1
-    // Playwright isVisible() does not check opacity, so check computed opacity instead
-    const cloudsOpacity = await page.locator('.clouds').evaluate(el => window.getComputedStyle(el).opacity);
-    expect(parseFloat(cloudsOpacity)).toBeLessThan(0.1);
+    // renderClouds(false) empties the container at night — no .cloud divs should exist
+    const cloudCount = await page.locator('.cloud').count();
+    expect(cloudCount).toBe(0);
   });
 });
 
@@ -721,13 +720,9 @@ test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
     // Requirement: clouds belong to the day theme only.
     await setupAndEnterZip(page, SUNCALC_NIGHT);
     await expect(page.locator('body')).toHaveClass(/night/);
-    const cloudVisible = await page.evaluate(() => {
-      const cloud = document.querySelector('.cloud, [class*="cloud"]');
-      if (!cloud) return false;
-      const style = window.getComputedStyle(cloud);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-    });
-    expect(cloudVisible).toBe(false);
+    // renderClouds(false) empties the container at night — no .cloud divs should exist
+    const cloudCount = await page.locator('.cloud').count();
+    expect(cloudCount).toBe(0);
   });
 });
 
