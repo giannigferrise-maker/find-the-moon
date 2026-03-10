@@ -89,13 +89,18 @@ before asserting theme-specific behaviour.
 
 ### Visibility rule (CSS)
 ```css
-#stars-canvas { opacity: 0; }              /* hidden by default */
-body.night #stars-canvas { opacity: 1; }   /* visible at night */
+#stars-canvas { opacity: 0; transition: opacity 1s ease; }  /* hidden by default */
+body.night #stars-canvas { opacity: 1; }                    /* visible at night */
 ```
 
+> **Important:** `#stars-canvas` has `transition: opacity 1s ease` — the same pitfall
+> as `.clouds`. Do **not** check computed opacity immediately after a theme switch;
+> use the body class instead.
+
 ### What this means for tests
-- **Do:** check `#stars-canvas` is attached/visible and that `body` has `night` class.
-- **Do:** check computed `opacity` on `#stars-canvas` to distinguish day vs. night.
+- **Do:** check `#stars-canvas` is attached and that `body` has `night` class.
+- **Do:** assert `body` does NOT have `night` class to verify the canvas is hidden in day mode.
+- **Don't:** check computed `opacity` on `#stars-canvas` — it will be mid-transition.
 - **Don't:** search `innerHTML` or `innerText` for "Orion", "Cassiopeia", or "Big Dipper"
   — these strings appear in the inline `<script>` source and will always be found
   regardless of the active theme.
