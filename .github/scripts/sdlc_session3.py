@@ -62,6 +62,22 @@ def apply_replacement(file_path, old_string, new_string):
         raise FileNotFoundError(f"File not found: {file_path}")
     if old_string not in content:
         raise ValueError(f"old_string not found in {file_path}:\n{old_string[:200]}")
+    # Guard 1: only replace TODO stubs — never touch passing tests.
+    if 'TODO' not in old_string:
+        raise ValueError(
+            f"Rejected replacement for {file_path}: old_string does not contain 'TODO'. "
+            f"Session 3 must only replace stub placeholders, not existing passing tests.\n"
+            f"First 200 chars of old_string: {old_string[:200]}"
+        )
+    # Guard 2: reject new_string values that contain known corruption patterns
+    # (e.g. `});pyOn(` which is a corrupted `jest.spyOn` fragment, or
+    # `', () => {` appended mid-line from a malformed describe block).
+    if 'pyOn(' in new_string or ('), () => {' in new_string and 'test.describe' not in new_string):
+        raise ValueError(
+            f"Rejected replacement for {file_path}: new_string contains a known corruption pattern "
+            f"(pyOn or describe-fragment on closing brace). Skipping to avoid breaking the file.\n"
+            f"First 200 chars of new_string: {new_string[:200]}"
+        )
     updated = content.replace(old_string, new_string, 1)
     write_file(file_path, updated)
     print(f"Patched {file_path}")
@@ -73,8 +89,8 @@ issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_content       = read_file('FTM-SRS-001.md', max_chars=10000)
-jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=15000)
-playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=15000)
+jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=30000)
+playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=20000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 
@@ -142,10 +158,38 @@ replacements = data.get('replacements', [])
 if not replacements:
     print("No test stubs to replace for this issue.")
 else:
+    applied = 0
     for r in replacements:
-        apply_replacement(r['file'], r['old_string'], r['new_string'])
+        try:
+            apply_replacement(r['file'], r['old_string'], r['new_string'])
+            applied += 1
+        except ValueError as e:
+            print(f"WARNING: Skipped replacement — {e}")
+    print(f"Applied {applied}/{len(replacements)} replacements.")
 
 print(data.get('summary', 'Done.'))
+
+# ── Post-replacement: strip any residual corruption patterns ──────────────────
+# Occasionally the LLM embeds `});pyOn(` (corrupted jest.spyOn) or `});)', () => {`
+# (corrupted test.describe opener) in its output. Strip them deterministically.
+
+import re as _re
+
+_CORRUPTION_RE = _re.compile(
+    r'(\}\);|\}\)\s*;)pyOn\([^\n]*\n(?:[ \t][^\n]*\n)*?[ \t]*\}\);?\n',
+    _re.MULTILINE
+)
+_DESCRIBE_FRAGMENT_RE = _re.compile(r"(\}\);)(?:'\s*,\s*\(\)\s*=>\s*\{)+", _re.MULTILINE)
+
+for _test_file in ['__tests_verify__/verification.test.js', '__tests_verify__/verification.spec.js']:
+    _content = read_file(_test_file)
+    if not _content:
+        continue
+    _fixed = _CORRUPTION_RE.sub(r'', _content)
+    _fixed = _DESCRIBE_FRAGMENT_RE.sub(r'\1', _fixed)
+    if _fixed != _content:
+        write_file(_test_file, _fixed)
+        print(f"Post-process: stripped corruption patterns from {_test_file}")
 
 # ── self-critique loop ────────────────────────────────────────────────────────
 # After generating tests, ask Claude to review them for common mistakes and
@@ -156,8 +200,8 @@ MAX_CRITIQUE_ROUNDS = 2
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
-    jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=15000)
-    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=15000)
+    jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=30000)
+    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=20000)
 
     critique_prompt = f"""You are a senior test engineer reviewing freshly generated test code \
 for the "Find the Moon" web application.
@@ -171,6 +215,9 @@ JEST defects to look for:
   watch for nested `describe` calls that should be `it` or `test`.
 - Missing `await` before async Playwright-style calls inside Jest (should not appear in Jest file).
 - Orphaned closing braces `}}}}` or `}}` that don't match any open block.
+- Lines containing `}});pyOn(` or `}});pyOn(` — corrupted `jest.spyOn` concatenated onto a closing \
+  brace. Remove the entire orphaned fragment (everything from `pyOn(` through the next standalone \
+  closing `}});` or `}}));`).
 
 PLAYWRIGHT defects to look for:
 - `describe(...)` instead of `test.describe(...)`.
@@ -178,6 +225,8 @@ PLAYWRIGHT defects to look for:
 - Missing `async` on test callbacks that use `await`.
 - Missing `await` before `page.*` calls.
 - Orphaned closing braces that don't match any open block.
+- Lines like `}});)', () => {{` — corrupted `test.describe(` callback fragment on a closing brace. \
+  Strip everything after the bare `}});`.
 
 BOTH files:
 - Unterminated strings or template literals.
@@ -223,6 +272,11 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         print("No defects found — stopping critique loop.")
         break
 
+    applied_fixes = 0
     for fix in fixes:
-        apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
-    print(f"Applied {len(fixes)} fix(es) from critique round {round_num}.")
+        try:
+            apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
+            applied_fixes += 1
+        except ValueError as e:
+            print(f"WARNING: Skipped critique fix — {e}")
+    print(f"Applied {applied_fixes}/{len(fixes)} fix(es) from critique round {round_num}.")

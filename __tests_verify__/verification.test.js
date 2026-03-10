@@ -598,24 +598,17 @@ describe('[FTM-SC-002] SRI hash is a valid SHA-384 or SHA-512 base64 digest', ()
   });
 
   it('optionally verifies the SHA-384 digest matches the locally cached suncalc.min.js', () => {
-    // TODO: If a local copy of suncalc.min.js is available under
-    //       vendor/suncalc.min.js (or similar), read it, compute its
-    //       SHA-384 digest with Node's crypto module, base64-encode it,
-    //       prepend "sha384-", and compare to the integrity attribute.
-    //       Skip gracefully (test.skip) when no local copy is present.
-    //
-    // Example skeleton:
-    //   const crypto = require('crypto');
-    //   const vendor = path.resolve(__dirname, '../vendor/suncalc.min.js');
-    //   if (!fs.existsSync(vendor)) { return; } // skip when not cached
-    //   const digest = crypto.createHash('sha384')
-    //     .update(fs.readFileSync(vendor))
-    //     .digest('base64');
-    //   const expected = `sha384-${digest}`;
-    //   const scripts  = extractExternalScripts(INDEX_HTML);
-    //   const sunCalc  = scripts.find(s => s.src.includes('suncalc'));
-    //   expect(sunCalc.integrity).toBe(expected);
-    expect(true).toBe(true); // remove this line once implemented
+    const crypto = require('crypto');
+    const vendor = path.resolve(__dirname, '../vendor/suncalc.min.js');
+    if (!fs.existsSync(vendor)) { return; } // skip gracefully when no local copy is present
+    const digest = crypto.createHash('sha384')
+      .update(fs.readFileSync(vendor))
+      .digest('base64');
+    const expected = `sha384-${digest}`;
+    const scripts  = extractExternalScripts(INDEX_HTML);
+    const sunCalc  = scripts.find(s => s.src.includes('suncalc'));
+    expect(sunCalc).toBeDefined();
+    expect(sunCalc.integrity).toBe(expected);
   });
 });
 
