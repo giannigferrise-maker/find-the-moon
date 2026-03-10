@@ -89,8 +89,8 @@ issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_content       = read_file('FTM-SRS-001.md', max_chars=10000)
-jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=15000)
-playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=15000)
+jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=60000)
+playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=60000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 
@@ -200,8 +200,8 @@ MAX_CRITIQUE_ROUNDS = 2
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
-    jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=15000)
-    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=15000)
+    jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=60000)
+    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=60000)
 
     critique_prompt = f"""You are a senior test engineer reviewing freshly generated test code \
 for the "Find the Moon" web application.
@@ -272,6 +272,11 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         print("No defects found — stopping critique loop.")
         break
 
+    applied_fixes = 0
     for fix in fixes:
-        apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
-    print(f"Applied {len(fixes)} fix(es) from critique round {round_num}.")
+        try:
+            apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
+            applied_fixes += 1
+        except ValueError as e:
+            print(f"WARNING: Skipped critique fix — {e}")
+    print(f"Applied {applied_fixes}/{len(fixes)} fix(es) from critique round {round_num}.")
