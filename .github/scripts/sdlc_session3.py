@@ -147,32 +147,6 @@ else:
 
 print(data.get('summary', 'Done.'))
 
-# ── Python pre-check: strip known corruption patterns ─────────────────────────
-# Session 3 replacements sometimes produce lines like `});pyOn(SunCalc, ...`
-# (corrupted `jest.spyOn` concatenated onto a closing brace) or
-# `});)', () => {` (Playwright describe fragment on a closing brace).
-# Strip these deterministically before the LLM critique runs.
-
-import re as _re
-
-_CORRUPTION_PATTERNS = [
-    # });pyOn(SunCalc, ...) through end of that orphaned fragment (next standalone });)
-    (_re.compile(r'\}\);pyOn\([^\n]*\n(?:[ \t][^\n]*\n)*?[ \t]*\}\);?\n', _re.MULTILINE), ''),
-    # });)', () => { ... repeated
-    (_re.compile(r"(\}\);)(?:'\,\s*\(\)\s*=>\s*\{)+", _re.MULTILINE), r'\1'),
-]
-
-for _test_file in ['__tests_verify__/verification.test.js', '__tests_verify__/verification.spec.js']:
-    _content = read_file(_test_file)
-    if not _content:
-        continue
-    _fixed = _content
-    for _pat, _repl in _CORRUPTION_PATTERNS:
-        _fixed = _pat.sub(_repl, _fixed)
-    if _fixed != _content:
-        write_file(_test_file, _fixed)
-        print(f"Pre-check: stripped corruption from {_test_file}")
-
 # ── self-critique loop ────────────────────────────────────────────────────────
 # After generating tests, ask Claude to review them for common mistakes and
 # apply fixes. Runs up to MAX_CRITIQUE_ROUNDS rounds.
@@ -197,9 +171,6 @@ JEST defects to look for:
   watch for nested `describe` calls that should be `it` or `test`.
 - Missing `await` before async Playwright-style calls inside Jest (should not appear in Jest file).
 - Orphaned closing braces `}}}}` or `}}` that don't match any open block.
-- Lines containing `});pyOn(` or `}});pyOn(` — this is corrupted `jest.spyOn` code that got \
-  concatenated onto a closing brace. Remove the entire orphaned fragment (everything from `pyOn(` \
-  through the next standalone `}});` or `}}));`).
 
 PLAYWRIGHT defects to look for:
 - `describe(...)` instead of `test.describe(...)`.
@@ -207,9 +178,6 @@ PLAYWRIGHT defects to look for:
 - Missing `async` on test callbacks that use `await`.
 - Missing `await` before `page.*` calls.
 - Orphaned closing braces that don't match any open block.
-- Lines like `}});)', () => {{` or `}});)', () => {{)', () => {{` — corrupted \
-  `test.describe(` callbacks concatenated onto closing braces. Strip everything after the bare \
-  `}});` or `});`.
 
 BOTH files:
 - Unterminated strings or template literals.
