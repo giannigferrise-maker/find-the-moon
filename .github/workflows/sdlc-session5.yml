@@ -53,3 +53,14 @@ jobs:
             git commit -m "SDLC Session 5: quality review for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
+
+      - name: Notify issue — Session 5 complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          ✅ **SDLC Session 5 complete** — Quality review done. See the draft PR for the verdict.
+
+          **Next step:** Review the draft PR, verify all checklist items, and merge when ready.
+          EOF
+          )"
