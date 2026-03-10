@@ -1360,3 +1360,170 @@ test.describe('[FTM-SC-004] SunCalc loads correctly with SRI attributes', () => 
     expect(true).toBe(true);
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-001
+// Requirement: The system shall draw constellation art over the nighttime star
+// field background, consisting of exactly three constellations: Orion,
+// Cassiopeia, and the Big Dipper.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-001] Constellation art present in night theme', () => {
+  test.beforeEach(async ({ page }) => {
+    // TODO: load the page with a SUNCALC_NIGHT mock so the nighttime theme is
+    // active, following the same addInitScript pattern used by FTM-FR-030.
+    await page.goto(INDEX_URL);
+    // TODO: trigger a location lookup so the night theme renders.
+  });
+
+  test('Orion constellation element is present in the night theme', async ({ page }) => {
+    // TODO: assert that a DOM element or canvas label corresponding to 'Orion'
+    // exists and is visible when the nighttime theme is active.
+    // Example: await expect(page.locator('[data-constellation="Orion"]')).toBeVisible();
+  });
+
+  test('Cassiopeia constellation element is present in the night theme', async ({ page }) => {
+    // TODO: assert that a DOM element or canvas label corresponding to
+    // 'Cassiopeia' exists and is visible when the nighttime theme is active.
+  });
+
+  test('Big Dipper constellation element is present in the night theme', async ({ page }) => {
+    // TODO: assert that a DOM element or canvas label corresponding to
+    // 'Big Dipper' exists and is visible when the nighttime theme is active.
+  });
+
+  test('exactly three constellation elements are rendered', async ({ page }) => {
+    // TODO: count the number of constellation marker/label elements
+    // (e.g. page.locator('[data-constellation]')) and assert the count === 3.
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-002
+// Requirement: The system shall render each constellation using thin line
+// segments connecting defined star positions and small dot markers at each
+// star position.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-002] Constellation lines and dot markers rendered', () => {
+  test('each constellation has at least one line/path element', async ({ page }) => {
+    // TODO: load page in night-theme context.
+    // TODO: for each of the three constellations assert the presence of SVG
+    // <line> / <path> elements, or intercept canvas draw calls to confirm
+    // lineTo / stroke calls are made for each constellation group.
+  });
+
+  test('each constellation has at least one dot/circle marker element', async ({ page }) => {
+    // TODO: load page in night-theme context.
+    // TODO: for each of the three constellations assert the presence of SVG
+    // <circle> elements, or intercept canvas draw calls to confirm arc / fill
+    // calls are made for each constellation group.
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-005
+// Requirement: The constellation artwork shall be static and shall not be
+// animated.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-005] Constellation artwork is static', () => {
+  test('constellation region pixel content is identical across two frames', async ({ page }) => {
+    // TODO: load page in night-theme context.
+    // TODO: take a screenshot (or a clipped region covering the constellation
+    // overlay) and store it as screenshotA.
+    // TODO: wait 500 ms.
+    // TODO: take a second screenshot of the same region and store as screenshotB.
+    // TODO: assert screenshotA and screenshotB are pixel-identical, confirming
+    // no animation is running on the constellation layer.
+    // Note: the underlying star field IS animated; clip the comparison region
+    // carefully to isolate constellation elements only, or compare a stable
+    // DOM attribute (e.g. absence of a CSS animation-name on the overlay).
+  });
+
+  test('constellation overlay element has no CSS animation applied', async ({ page }) => {
+    // TODO: load page in night-theme context.
+    // TODO: query the computed style of the constellation overlay element and
+    // assert that animationName === 'none' (or equivalent).
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-006
+// Requirement: The system shall display a text label identifying each
+// constellation by name, positioned near its corresponding pattern.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-006] Constellation name labels visible', () => {
+  test('label text "Orion" is visible in the night theme', async ({ page }) => {
+    // TODO: load page in night-theme context.
+    // TODO: assert a visible element with text 'Orion' is present.
+    // Example: await expect(page.getByText('Orion')).toBeVisible();
+    // If labels are drawn on canvas, assert via a canvas text-content
+    // interception or a companion accessible DOM label element.
+  });
+
+  test('label text "Cassiopeia" is visible in the night theme', async ({ page }) => {
+    // TODO: same approach as above for 'Cassiopeia'.
+  });
+
+  test('label text "Big Dipper" is visible in the night theme', async ({ page }) => {
+    // TODO: same approach as above for 'Big Dipper'.
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-008 (UI layer)
+// Requirement: The system shall render daytime animated clouds using the fill
+// color #c9b8e8.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
+  test.beforeEach(async ({ page }) => {
+    // TODO: load the page with a SUNCALC_DAY mock so the daytime theme is
+    // active, following the same addInitScript pattern used by FTM-FR-031.
+    await page.goto(INDEX_URL);
+    // TODO: trigger a location lookup so the day theme renders.
+  });
+
+  test('cloud element computed fill color matches #c9b8e8', async ({ page }) => {
+    // TODO: locate the cloud element (e.g. page.locator('.cloud') or the
+    // canvas/SVG element used for clouds).
+    // TODO: read its computed fill or background-color style.
+    // TODO: assert the resolved color equals #c9b8e8 / rgb(201, 184, 232).
+    // Example for an SVG/CSS fill:
+    //   const fill = await page.locator('.cloud').first().evaluate(
+    //     el => getComputedStyle(el).fill
+    //   );
+    //   expect(fill).toMatch(/rgb\(201,\s*184,\s*232\)/);
+  });
+
+  test('cloud fill color is not white (#ffffff)', async ({ page }) => {
+    // TODO: same locator as above.
+    // TODO: assert the resolved color does NOT equal rgb(255, 255, 255) / #ffffff
+    // to guard against accidental reversion to the legacy white cloud color.
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-009
+// Requirement: The cloud shape and animation behavior shall remain unchanged;
+// only the fill color shall change.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-009] Cloud shape and animation unchanged', () => {
+  test('cloud element bounding box dimensions match baseline', async ({ page }) => {
+    // TODO: load page in day-theme context.
+    // TODO: obtain the bounding box of the cloud element.
+    // TODO: assert width and height match previously recorded baseline values,
+    // confirming the cloud shape geometry was not altered.
+  });
+
+  test('cloud element has the same CSS animation-name as baseline', async ({ page }) => {
+    // TODO: load page in day-theme context.
+    // TODO: read the computed animationName of the cloud element.
+    // TODO: assert it matches the animation name used prior to this amendment
+    // (e.g. 'cloudDrift' or whatever the existing animation is named).
+  });
+
+  test('cloud element has the same CSS animation-duration as baseline', async ({ page }) => {
+    // TODO: load page in day-theme context.
+    // TODO: read the computed animationDuration of the cloud element.
+    // TODO: assert it matches the duration value used prior to this amendment.
+  });
+});

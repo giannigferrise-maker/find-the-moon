@@ -629,3 +629,71 @@ describe('[FTM-SC-003] crossorigin attribute present on SRI-protected scripts', 
     expect(sunCalc.crossorigin.toLowerCase()).toBe('anonymous');
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-003
+// Requirement: The constellation lines and dot markers shall be rendered at an
+// opacity between 0.4 and 0.5 inclusive.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
+  // Pull the constellation drawing-options / config from the module that owns
+  // the constellation rendering logic.  Adjust the require path to match the
+  // actual source file once it is implemented.
+  const { CONSTELLATION_STYLE } = require('../src/constellations');
+
+  it('exports a CONSTELLATION_STYLE object with an opacity property', () => {
+    // TODO: verify that CONSTELLATION_STYLE (or equivalent exported constant)
+    // has an `opacity` property defined.
+    // expect(CONSTELLATION_STYLE).toBeDefined();
+    // expect(typeof CONSTELLATION_STYLE.opacity).toBe('number');
+    TODO;
+  });
+
+  it('opacity is at least 0.4', () => {
+    // TODO: assert CONSTELLATION_STYLE.opacity >= 0.4
+    TODO;
+  });
+
+  it('opacity is at most 0.5', () => {
+    // TODO: assert CONSTELLATION_STYLE.opacity <= 0.5
+    TODO;
+  });
+
+  it('opacity value is the same for lines and dot markers', () => {
+    // TODO: if line opacity and dot opacity are stored separately, assert both
+    // fall within [0.4, 0.5].  If a single shared value is used, confirm it
+    // applies to both draw calls (may require inspecting draw helper or
+    // verifying the config is passed to both line and dot renderers).
+    TODO;
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-008 (config / logic layer)
+// Requirement: The system shall render daytime animated clouds using the fill
+// color #c9b8e8.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
+  // Adjust the require path to match the actual source file / exported constant
+  // once it is implemented (e.g. src/cloudTheme.js, src/dayTheme.js, etc.).
+  const { CLOUD_FILL_COLOR } = require('../src/dayTheme');
+
+  it('exports a CLOUD_FILL_COLOR constant', () => {
+    // TODO: verify the constant is defined and is a string.
+    // expect(CLOUD_FILL_COLOR).toBeDefined();
+    // expect(typeof CLOUD_FILL_COLOR).toBe('string');
+    TODO;
+  });
+
+  it('CLOUD_FILL_COLOR equals #c9b8e8 (case-insensitive)', () => {
+    // TODO: assert CLOUD_FILL_COLOR.toLowerCase() === '#c9b8e8'
+    TODO;
+  });
+
+  it('CLOUD_FILL_COLOR is not the legacy white value', () => {
+    // TODO: assert CLOUD_FILL_COLOR.toLowerCase() !== '#ffffff' and !== 'white'
+    // to guard against accidental reversion to the old color.
+    TODO;
+  });
+});
