@@ -62,9 +62,17 @@ def apply_replacement(file_path, old_string, new_string):
         raise FileNotFoundError(f"File not found: {file_path}")
     if old_string not in content:
         raise ValueError(f"old_string not found in {file_path}:\n{old_string[:200]}")
-    # Guard: reject new_string values that contain known corruption patterns
-    # (e.g. `});pyOn(` which is a corrupted `jest.spyOn` fragment concatenated onto a closing brace).
-    if 'pyOn(' in new_string or ")', () => {'" in new_string:
+    # Guard 1: only replace TODO stubs — never touch passing tests.
+    if 'TODO' not in old_string:
+        raise ValueError(
+            f"Rejected replacement for {file_path}: old_string does not contain 'TODO'. "
+            f"Session 3 must only replace stub placeholders, not existing passing tests.\n"
+            f"First 200 chars of old_string: {old_string[:200]}"
+        )
+    # Guard 2: reject new_string values that contain known corruption patterns
+    # (e.g. `});pyOn(` which is a corrupted `jest.spyOn` fragment, or
+    # `', () => {` appended mid-line from a malformed describe block).
+    if 'pyOn(' in new_string or ('), () => {' in new_string and 'test.describe' not in new_string):
         raise ValueError(
             f"Rejected replacement for {file_path}: new_string contains a known corruption pattern "
             f"(pyOn or describe-fragment on closing brace). Skipping to avoid breaking the file.\n"
