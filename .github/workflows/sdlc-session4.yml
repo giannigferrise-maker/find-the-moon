@@ -30,6 +30,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Sync SDLC scripts from main
+        run: |
+          git fetch origin main
+          git checkout origin/main -- .github/scripts/ .github/workflows/
+
       - name: Get diff against main
         run: |
           git fetch origin main
