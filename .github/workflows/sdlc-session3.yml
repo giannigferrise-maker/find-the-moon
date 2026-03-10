@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -63,3 +64,14 @@ jobs:
 
       - name: Run Playwright verification tests
         run: npx playwright test --config playwright.verify.config.js __tests_verify__/verification.spec.js
+
+      - name: Notify issue — Session 3 complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          ✅ **SDLC Session 3 complete** — Verification tests written and passing.
+
+          **Next step:** Apply label \`4-security-ready\` to trigger security review.
+          EOF
+          )"

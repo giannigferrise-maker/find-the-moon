@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -67,3 +68,14 @@ jobs:
           else
             echo "No changes were pushed — skipping PR creation."
           fi
+
+      - name: Notify issue — Session 1 complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          ✅ **SDLC Session 1 complete** — Requirements updated and test stubs added.
+
+          **Next step:** Apply label \`2-code-ready\` to trigger code implementation.
+          EOF
+          )"

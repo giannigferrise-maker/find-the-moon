@@ -166,7 +166,7 @@ JEST defects to look for:
 - `describe(...)` used at top level instead of being inside a `describe` block — fine as-is, but \
   watch for nested `describe` calls that should be `it` or `test`.
 - Missing `await` before async Playwright-style calls inside Jest (should not appear in Jest file).
-- Orphaned closing braces `}});` or `});` that don't match any open block.
+- Orphaned closing braces `}}}}` or `}}` that don't match any open block.
 
 PLAYWRIGHT defects to look for:
 - `describe(...)` instead of `test.describe(...)`.

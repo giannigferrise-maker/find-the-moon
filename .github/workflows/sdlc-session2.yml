@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -53,3 +54,14 @@ jobs:
             git commit -m "SDLC Session 2: code implementation for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
+
+      - name: Notify issue — Session 2 complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          ✅ **SDLC Session 2 complete** — Code implemented and unit tests passing.
+
+          **Next step:** Apply label \`3-tests-ready\` to trigger automated verification test generation.
+          EOF
+          )"

@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -53,3 +54,14 @@ jobs:
             git commit -m "SDLC Session 4: security review for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
+
+      - name: Notify issue — Session 4 complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
+          ✅ **SDLC Session 4 complete** — Security review done. See the draft PR for the verdict.
+
+          **Next step:** Apply label \`5-quality-ready\` to trigger quality review.
+          EOF
+          )"
