@@ -384,7 +384,7 @@ test.describe('[FTM-FR-005] Display location name', () => {
 // Logic-layer counterpart: verification.test.js [FTM-FR-012]
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-012] Compass direction display (UI)', () => {, () => {at night', () => {
+test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
   test('stars canvas element is present in the DOM when night theme is active', async ({ page }) => {
     // Requirement: the system shall display an animated star field background when the nighttime theme is active.
     await setupAndEnterZip(page, SUNCALC_NIGHT);
