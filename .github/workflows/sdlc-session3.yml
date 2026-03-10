@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Run Jest verification tests
-        run: npm run test:verify -- --testPathPattern=verification.test.js
+        run: npx jest --config jest.verify.config.js --forceExit
 
       - name: Run Playwright verification tests
         run: npx playwright test --config playwright.verify.config.js __tests_verify__/verification.spec.js
