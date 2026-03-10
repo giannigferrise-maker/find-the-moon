@@ -8,12 +8,18 @@ file replacements, then applies them to disk for the workflow to commit and PR.
 After applying replacements, runs a two-layer self-critique:
   Layer 1 — Python pre-checks (deterministic regex, blocks pipeline on critical issues)
   Layer 2 — LLM critique (up to 2 rounds, catches semantic issues)
+
+Then maintains unit tests (__tests__/) and runs npm test in a fix loop:
+  - If tests fail, Claude reviews the output and fixes code or tests
+  - Up to 2 fix rounds; if still failing, pipeline aborts (sys.exit 1)
+  - Commit only happens after all tests are green
 """
 
 import os
 import re
 import sys
 import json
+import subprocess
 import anthropic
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -376,6 +382,121 @@ If no unit test changes are needed, return an empty replacements array.
             apply_replacement(r['file'], r['old_string'], r['new_string'])
         print(f"Applied {len(ut_replacements)} unit test change(s): {unit_test_summary}")
 
+# ── unit test fix loop ────────────────────────────────────────────────────────
+# Run npm test before the commit. If tests fail, ask Claude to fix the code
+# or tests, then re-run. Up to MAX_TEST_FIX_ROUNDS rounds. If still failing
+# after max rounds, abort — a broken build never lands on the branch.
+
+MAX_TEST_FIX_ROUNDS = 2
+test_loop_summary   = 'All unit tests passed on first run.'
+
+def run_npm_test():
+    """Run npm test, return (passed: bool, output: str)."""
+    result = subprocess.run(
+        ['npm', 'test', '--', '--forceExit'],
+        capture_output=True, text=True
+    )
+    output = (result.stdout + result.stderr).strip()
+    return result.returncode == 0, output
+
+passed, test_output = run_npm_test()
+
+if not passed:
+    print(f"\n⚠️  npm test failed. Entering test fix loop (max {MAX_TEST_FIX_ROUNDS} rounds)...")
+    test_loop_summary = 'Tests failed after code changes.'
+
+    for fix_round in range(1, MAX_TEST_FIX_ROUNDS + 1):
+        print(f"\nTest fix round {fix_round}...")
+
+        # Re-read all relevant files fresh from disk
+        index_html_current    = read_file('index.html', max_chars=20000)
+        moon_logic_current    = read_file('src/moonLogic.js', max_chars=10000)
+        unit_tests_current    = {
+            '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=5000),
+            '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=5000),
+            '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=6000),
+            '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=5000),
+            '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=3000),
+            '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=5000),
+        }
+        unit_tests_block = '\n\n'.join(
+            f"--- {p} ---\n{c}" for p, c in unit_tests_current.items() if c
+        )
+
+        # Trim test output to most useful part (last 4000 chars has the failure summary)
+        trimmed_output = test_output[-4000:] if len(test_output) > 4000 else test_output
+
+        test_fix_prompt = f"""You are a senior JavaScript developer. The unit test suite for \
+the "Find the Moon" web app is failing after code changes were applied for issue \
+#{issue_number}: {issue_title}
+
+--- Failing test output ---
+{trimmed_output}
+
+--- Current src/moonLogic.js ---
+{moon_logic_current}
+
+--- Current unit test files ---
+{unit_tests_block}
+
+Your task: fix the failures. Follow these rules:
+- Prefer fixing the SOURCE CODE (index.html or src/moonLogic.js) if the implementation is wrong
+- Fix a TEST only if the test itself is incorrect (e.g. it tests the old behaviour that was
+  intentionally changed by this issue, or the test was newly generated and has a bug)
+- Do NOT change tests that are catching a real bug in the new code — fix the code instead
+- Make the minimal change to get the tests passing
+- Do not refactor, do not add new tests, do not change passing tests
+- Match existing code style exactly
+
+Return ONLY a valid JSON object — no markdown fences, no preamble:
+{{
+  "replacements": [
+    {{
+      "file": "src/moonLogic.js, index.html, or __tests__/somefile.test.js",
+      "old_string": "exact verbatim text to replace",
+      "new_string": "fixed replacement"
+    }}
+  ],
+  "fix_summary": "brief description of what was broken and how it was fixed"
+}}
+
+If you cannot determine a safe fix, return an empty replacements array with an explanation
+in fix_summary — do NOT guess.
+"""
+
+        fix_msg = client.messages.create(
+            model='claude-sonnet-4-6',
+            max_tokens=4096,
+            messages=[{'role': 'user', 'content': test_fix_prompt}],
+        )
+
+        fix_data = extract_json(fix_msg.content[0].text, fix_msg)
+        fix_summary  = fix_data.get('fix_summary', '')
+        test_fixes   = fix_data.get('replacements', [])
+
+        print(f"Fix suggestion: {fix_summary}")
+
+        if not test_fixes:
+            print("Claude could not determine a safe fix — aborting.")
+            print(f"Last test output:\n{trimmed_output}")
+            sys.exit(1)
+
+        for fix in test_fixes:
+            apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
+
+        passed, test_output = run_npm_test()
+        if passed:
+            test_loop_summary = f"Tests fixed in round {fix_round}: {fix_summary}"
+            print(f"✅ All unit tests passing after fix round {fix_round}.")
+            break
+        else:
+            print(f"Tests still failing after fix round {fix_round}.")
+
+    if not passed:
+        print(f"\n❌ Unit tests still failing after {MAX_TEST_FIX_ROUNDS} fix rounds. Aborting.")
+        print(f"Last test output:\n{test_output[-2000:]}")
+        sys.exit(1)
+
 # ── write PR body ─────────────────────────────────────────────────────────────
 
 pr_summary = data.get('pr_summary', f'Code implementation for issue #{issue_number}.')
@@ -406,8 +527,9 @@ pr_body = f"""## SDLC Session 2: Code Implementation
 ## Self-Critique
 {critique_trail}
 
-## Unit Test Maintenance
-- {unit_test_summary}
+## Unit Tests
+- Maintenance: {unit_test_summary}
+- Result: {test_loop_summary}
 
 ## Review checklist
 - [ ] Code matches existing style and conventions
