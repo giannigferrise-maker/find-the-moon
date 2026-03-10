@@ -513,6 +513,8 @@ test.describe('[FTM-FR-033] Lavender animated clouds rendered in the day theme',
     await expect(page.locator('body')).not.toHaveClass(/day/, { timeout: 5000 });
   });
 });
+
+test.describe('[FTM-FR-012] Compass direction display (UI) — additional tests', () => {
   test('displays a 16-point compass label after zip lookup', async ({ page }) => {
     // Requirement: the moon direction must be shown as one of 16 compass point labels.
     await setupAndEnterZip(page, SUNCALC_DAY);
@@ -683,7 +685,9 @@ test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
     });
     expect(cloudVisible).toBe(false);
   });
-});)', () => {
+});
+
+test.describe('[FTM-FR-012] Compass direction display (UI) — direction tests', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page);
   });
