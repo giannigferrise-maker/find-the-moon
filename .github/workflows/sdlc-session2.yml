@@ -21,8 +21,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
         run: pip install anthropic
+
+      - name: Install Node dependencies
+        run: npm install
 
       - name: Configure git
         run: |
@@ -39,10 +46,13 @@ jobs:
 
       - name: Commit and push
         run: |
-          git add -A
+          git add index.html src/moonLogic.js __tests__/ .github/sdlc_pr_body.md
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             git commit -m "SDLC Session 2: code implementation for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
+
+      - name: Run unit tests
+        run: npm test

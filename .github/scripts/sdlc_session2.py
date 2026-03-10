@@ -282,6 +282,100 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         apply_replacement(fix['file'], fix['old_string'], fix['new_string'])
     print(f"Applied {len(fixes)} fix(es) from critique round {round_num}.")
 
+# ── unit test maintenance ─────────────────────────────────────────────────────
+# After code changes and self-critique, ask Claude whether any unit tests in
+# __tests__/ need to be added or updated to cover the new behaviour.
+
+unit_test_summary = 'Not run (no code replacements were applied).'
+
+if replacements:
+    unit_tests = {
+        '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=6000),
+        '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=6000),
+        '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=8000),
+        '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=6000),
+        '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=4000),
+        '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=6000),
+    }
+
+    unit_test_files_block = '\n\n'.join(
+        f"--- {path} ---\n{content}" for path, content in unit_tests.items() if content
+    )
+
+    replacements_for_prompt = '\n'.join(
+        f"  [{i+1}] file={r['file']}\n"
+        f"      old_string (first 150 chars): {r.get('old_string','')[:150]!r}\n"
+        f"      new_string (first 150 chars): {r.get('new_string','')[:150]!r}"
+        for i, r in enumerate(replacements)
+    )
+
+    unit_test_prompt = f"""You are a senior JavaScript developer maintaining the unit test suite \
+for the "Find the Moon" web application.
+
+The following code changes were just applied to the codebase for issue #{issue_number}: {issue_title}
+
+{issue_body}
+
+--- Code changes applied ---
+{replacements_for_prompt}
+
+--- Relevant SRS requirements ---
+{srs_content}
+
+--- Existing unit test files (__tests__/) ---
+{unit_test_files_block}
+
+Your task: determine whether the code changes above require any additions or updates to the
+unit tests in __tests__/. The unit tests cover the pure JS logic in src/moonLogic.js.
+
+Rules:
+- Add new test cases or describe blocks ONLY for new functions, new branches, or new behaviour
+  introduced by this issue
+- Update existing tests ONLY if the code change alters the expected output of an already-tested
+  function
+- Do NOT modify tests that are unaffected by this change
+- Match the existing test style exactly — same 'use strict', same require pattern, same
+  describe/it structure, same mock approach (jest.spyOn on SunCalc methods)
+- Tests must be deterministic: mock all SunCalc calls, no real network, no real GPS, no real time
+- Do not add new imports or dependencies not already in the file
+- If the code change is only in index.html (UI/DOM) with no logic changes to moonLogic.js,
+  return an empty replacements array — unit tests cover logic, not DOM
+
+Return ONLY a valid JSON object — no markdown fences, no preamble:
+{{
+  "replacements": [
+    {{
+      "file": "__tests__/moonPosition.test.js (or whichever file)",
+      "old_string": "exact verbatim anchor text to replace or append after",
+      "new_string": "updated or appended test content"
+    }}
+  ],
+  "unit_test_summary": "1-2 sentences describing what tests were added/updated, or why none were needed"
+}}
+
+If no unit test changes are needed, return an empty replacements array.
+"""
+
+    print("\nRunning unit test maintenance check...")
+    ut_message = client.messages.create(
+        model='claude-sonnet-4-6',
+        max_tokens=4096,
+        messages=[{'role': 'user', 'content': unit_test_prompt}],
+    )
+
+    ut_text = ut_message.content[0].text
+    ut_data = extract_json(ut_text, ut_message)
+
+    unit_test_summary = ut_data.get('unit_test_summary', '')
+    ut_replacements   = ut_data.get('replacements', [])
+
+    if not ut_replacements:
+        print(f"Unit tests: {unit_test_summary}")
+    else:
+        for r in ut_replacements:
+            apply_replacement(r['file'], r['old_string'], r['new_string'])
+        print(f"Applied {len(ut_replacements)} unit test change(s): {unit_test_summary}")
+
 # ── write PR body ─────────────────────────────────────────────────────────────
 
 pr_summary = data.get('pr_summary', f'Code implementation for issue #{issue_number}.')
@@ -311,6 +405,9 @@ pr_body = f"""## SDLC Session 2: Code Implementation
 
 ## Self-Critique
 {critique_trail}
+
+## Unit Test Maintenance
+- {unit_test_summary}
 
 ## Review checklist
 - [ ] Code matches existing style and conventions
