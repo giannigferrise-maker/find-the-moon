@@ -63,3 +63,52 @@ This branch introduces Subresource Integrity (SRI) protection for the SunCalc CD
 6. Consolidate duplicate SRI describe blocks or explicitly designate one as canonical.
 7. Tighten SRI regex to enforce minimum base64 body length.
 8. Document the rationale for removing CI test execution from sdlc-session3.yml or restore a compensating control.
+
+
+## Quality Review — Issue #35: Update Visual Themes
+
+| Field | Value |
+|---|---|
+| **Review Date** | 2026-03-14 |
+| **Branch** | feature/issue-35-visual-themes |
+| **Reviewer Role** | Quality Engineer |
+| **Framework** | ISO 62304 (adapted, non-medical) |
+| **Verdict** | ❌ FAIL — Do Not Merge |
+
+### Summary
+
+This PR implements constellation art for the night theme and lavender cloud color for the day theme (Issue #35). The feature implementation itself is directionally correct and code changes are minimal and focused. However, the PR introduces multiple process and documentation failures that prevent it from meeting merge quality standards.
+
+### Findings
+
+| # | Activity | Severity | Title |
+|---|---|---|---|
+| 1 | Requirements Quality §5.2 | PASS | New requirements uniquely identified and well-formed |
+| 2 | Requirements Quality §5.2 | WARNING | FTM-VT-007 uses subjective acceptance criteria |
+| 3 | Requirements Quality §5.2 | WARNING | SRS version number not incremented for Amendment C |
+| 4 | Requirements Quality §5.2 | WARNING | FTM-VT-004 'light blue' not quantitatively defined |
+| 5 | Code Quality §5.5 | PASS | Cloud color change minimal and correctly implemented |
+| 6 | Code Quality §5.5 | PASS | Constellation drawing function appropriately contained |
+| 7 | Code Quality §5.5 | FAIL | FTM-TEST-GUIDE-001 deleted with no replacement or change control record |
+| 8 | Code Quality §5.5 | FAIL | Two FTM-FR-012 UI tests deleted with no requirements justification |
+| 9 | Code Quality §5.5 | WARNING | Self-critique did not identify substantive defects |
+| 10 | Test Coverage §5.6 | FAIL | FTM-VT-001–FTM-VT-009: no automated tests added for 'Test'-method requirements |
+| 11 | Test Coverage §5.6 | FAIL | FTM-FR-012 UI layer now untested after test deletion |
+| 12 | Test Coverage §5.6 | WARNING | Lavender color test searches innerHTML — risk of false positive |
+| 13 | Traceability §5.7 | FAIL | VTM not updated for any of the nine Amendment C requirements |
+| 14 | Traceability §5.7 | FAIL | VTM references deleted FTM-FR-012 UI tests — now inaccurate |
+| 15 | Process Compliance | FAIL | Controlled document FTM-TEST-GUIDE-001 deleted without change control |
+| 16 | Process Compliance | WARNING | PR body missing 'Closes #35' issue link |
+| 17 | Process Compliance | WARNING | SRS version note and requirements count not updated for Amendment C |
+
+### Required Actions Before Merge
+
+1. **[FAIL — Blocker]** Restore or formally supersede FTM-TEST-GUIDE-001 with a change control rationale. If intentionally retiring the document, add a supersession notice and update all references.
+2. **[FAIL — Blocker]** Restore the deleted FTM-FR-012 Compass direction UI tests, or provide an SRS amendment formally removing or modifying FTM-FR-012 and FTM-UR-002.
+3. **[FAIL — Blocker]** Add Playwright verification tests for all FTM-VT requirements marked 'Test' (FTM-VT-001, -002, -003, -005, -006, -008, -009).
+4. **[FAIL — Blocker]** Update the Verification Traceability Matrix with entries for FTM-VT-001 through FTM-VT-009.
+5. **[FAIL — Blocker]** Correct the VTM entry for FTM-FR-012 to reflect that the UI-layer tests have been removed.
+6. **[WARNING]** Increment SRS version to reflect Amendment C addition; update Last Updated date and requirements count.
+7. **[WARNING]** Add quantitative definition for 'light blue' in FTM-VT-004.
+8. **[WARNING]** Add 'Closes #35' to PR body.
+9. **[WARNING]** Add version history note to SRS footer for Amendment C.
