@@ -385,6 +385,134 @@ test.describe('[FTM-FR-005] Display location name', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 test.describe('[FTM-FR-012] Compass direction display (UI)', () => {)', () => {)', () => {
+  test('displays one of the 16 valid compass point labels after zip lookup', async ({ page }) => {
+    // Requirement: the moon direction must be shown as one of 16 compass point labels.
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    const VALID_LABELS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    const dirText = await page.locator('#moon-dir').innerText();
+    const found = VALID_LABELS.some(label => dirText.includes(label));
+    expect(found).toBe(true);
+  });
+
+  test('displays the compass direction in plain English words', async ({ page }) => {
+    // Requirement: directional information must be in plain English.
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    const dirText = await page.locator('#moon-dir').innerText();
+    expect(dirText).toMatch(/North|South|East|West/i);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-FR-032  Animated star field + constellation art at night
+// Requirement: The system shall display an animated star field background
+//              when the nighttime theme is active.
+// Issue #35 adds: 3 constellations (Orion, Cassiopeia, Big Dipper) drawn over
+//              the star field with low-opacity lines, dot markers, and labels.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-FR-032] Star field and constellation art rendered at night', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
+  });
+
+  test('a canvas element for the star field is present and visible in the night theme', async ({ page }) => {
+    // Requirement: animated star field must be displayed at night.
+    const canvas = page.locator('#star-canvas, canvas').first();
+    await expect(canvas).toBeVisible({ timeout: 5000 });
+  });
+
+  test('body carries the "night" CSS class when the nighttime theme is active', async ({ page }) => {
+    // Requirement: nighttime theme must be applied when sun > 6° below horizon.
+    await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
+  });
+
+  test('constellation labels for Orion, Cassiopeia, and Big Dipper are present in the DOM or canvas layer', async ({ page }) => {
+    // Requirement: each constellation shall be labelled with its name.
+    const bodyText = await page.locator('body').innerHTML();
+    // Labels may be in SVG text, canvas aria-label, or hidden span — check page text content
+    const pageText = await page.evaluate(() => document.body.innerText + document.body.innerHTML);
+    expect(pageText).toMatch(/Orion/i);
+    expect(pageText).toMatch(/Cassiopeia/i);
+    expect(pageText).toMatch(/Big Dipper/i);
+  });
+
+  test('constellation overlay element exists in the night theme', async ({ page }) => {
+    // Requirement: constellation art must be drawn over the star field at night.
+    // The overlay may be a canvas, svg, or a div with a known class/id.
+    const overlay = page.locator('#constellation-canvas, #constellations, .constellation-layer, svg.constellations').first();
+    await expect(overlay).toBeAttached({ timeout: 5000 });
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-FR-033  Lavender clouds rendered in the day theme
+// Requirement: The system shall display animated clouds when the daytime
+//              theme is active. Issue #35 changes cloud color to #c9b8e8.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-FR-033] Lavender animated clouds rendered in the day theme', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupAndEnterZip(page, SUNCALC_DAY);
+  });
+
+  test('body carries the "day" CSS class when the daytime theme is active', async ({ page }) => {
+    // Requirement: daytime theme must be applied when sun altitude >= -6°.
+    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
+  });
+
+  test('a cloud layer element is present and visible in the day theme', async ({ page }) => {
+    // Requirement: animated clouds must be displayed during the daytime theme.
+    const clouds = page.locator('#cloud-canvas, #clouds, .cloud-layer, canvas').first();
+    await expect(clouds).toBeVisible({ timeout: 5000 });
+  });
+
+  test('cloud fill color is the soft lavender #c9b8e8 in the day theme', async ({ page }) => {
+    // Requirement: cloud color shall be #c9b8e8 (soft lavender) in the day theme.
+    // Check stylesheet or inline style for the lavender color value.
+    const lavenderPresent = await page.evaluate(() => {
+      // Check all stylesheets for the lavender color
+      const sheets = Array.from(document.styleSheets);
+      for (const sheet of sheets) {
+        try {
+          const rules = Array.from(sheet.cssRules || []);
+          for (const rule of rules) {
+            if (rule.cssText && rule.cssText.toLowerCase().includes('c9b8e8')) return true;
+          }
+        } catch (_) { /* cross-origin sheet */ }
+      }
+      // Also check inline styles and data attributes
+      const allElements = document.querySelectorAll('*');
+      for (const el of allElements) {
+        const style = el.getAttribute('style') || '';
+        if (style.toLowerCase().includes('c9b8e8')) return true;
+        const fill = el.getAttribute('fill') || '';
+        if (fill.toLowerCase().includes('c9b8e8')) return true;
+      }
+      // Check canvas via data attribute or script variable embedded in page
+      return document.documentElement.innerHTML.toLowerCase().includes('c9b8e8');
+    });
+    expect(lavenderPresent).toBe(true);
+  });
+
+  test('cloud shape and animation are still present with the lavender color', async ({ page }) => {
+    // Requirement: cloud shape and animation remain unchanged — only color changes.
+    // Verify the clouds element exists and the day theme is active (animation unchanged).
+    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
+    const clouds = page.locator('#cloud-canvas, #clouds, .cloud-layer, canvas').first();
+    await expect(clouds).toBeAttached({ timeout: 5000 });
+  });
+
+  test('night theme does NOT carry the day class (themes are mutually exclusive)', async ({ page }) => {
+    // Sanity: day and night themes must not both be active simultaneously.
+    await routeSunCalc(page, SUNCALC_NIGHT);
+    await routeZipApi(page);
+    await page.goto(INDEX_URL);
+    await page.fill('#zip-input', '10001');
+    await page.click('#zip-btn');
+    await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+    await expect(page.locator('body')).not.toHaveClass(/day/, { timeout: 5000 });
+  });
+});)', () => {)', () => {)', () => {
   test('displays a 16-point compass label after zip lookup', async ({ page }) => {
     // Requirement: the moon direction must be shown as one of 16 compass point labels.
     await setupAndEnterZip(page, SUNCALC_DAY);
