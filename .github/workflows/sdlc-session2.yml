@@ -37,6 +37,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Merge latest main into branch
+        run: |
+          git fetch origin main
+          git merge origin/main --no-edit
+
       - name: Run SDLC Session 2
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
