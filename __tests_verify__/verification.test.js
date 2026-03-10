@@ -386,12 +386,6 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
     jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(-5) });
     expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
   });
-});pyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(-5) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-});pyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(-5) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
 
   it('identifies day when sun altitude is 0° (at the horizon)', () => {
     jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(0) });
@@ -406,24 +400,6 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
   it('returns false (day) for real noon UTC conditions in New York in summer', () => {
     // Integration: real SunCalc; 16:00 UTC = 12:00 EDT in July
     expect(isNighttime(new Date('2025-07-15T16:00:00Z'), 40.7128, -74.006)).toBe(false);
-  });
-});pyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(-5) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-
-  it('identifies day when sun altitude is 0° (on the horizon)', () => {
-    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(0) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-
-  it('identifies day when sun altitude is positive (sun is up)', () => {
-    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(30) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-
-  it('returns false (day) for real solar noon conditions in New York in summer', () => {
-    // Integration: real SunCalc; 17:00 UTC = 13:00 EDT in July
-    expect(isNighttime(new Date('2025-07-15T17:00:00Z'), 40.7128, -74.006)).toBe(false);
   });
 });
 

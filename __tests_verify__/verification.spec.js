@@ -384,7 +384,7 @@ test.describe('[FTM-FR-005] Display location name', () => {
 // Logic-layer counterpart: verification.test.js [FTM-FR-012]
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-012] Compass direction display (UI)', () => {)', () => {)', () => {
+test.describe('[FTM-FR-012] Compass direction display (UI)', () => {
   test('displays one of the 16 valid compass point labels after zip lookup', async ({ page }) => {
     // Requirement: the moon direction must be shown as one of 16 compass point labels.
     await setupAndEnterZip(page, SUNCALC_DAY);
@@ -512,7 +512,7 @@ test.describe('[FTM-FR-033] Lavender animated clouds rendered in the day theme',
     await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
     await expect(page.locator('body')).not.toHaveClass(/day/, { timeout: 5000 });
   });
-});)', () => {)', () => {)', () => {
+});
   test('displays a 16-point compass label after zip lookup', async ({ page }) => {
     // Requirement: the moon direction must be shown as one of 16 compass point labels.
     await setupAndEnterZip(page, SUNCALC_DAY);
