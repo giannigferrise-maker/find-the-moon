@@ -89,6 +89,7 @@ issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_content       = read_file('FTM-SRS-001.md', max_chars=10000)
+test_guide        = read_file('FTM-TEST-GUIDE.md', max_chars=8000)
 jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=30000)
 playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=20000)
 
@@ -106,6 +107,9 @@ Issue #{issue_number}: {issue_title}
 --- SRS requirements (write tests against these, not against the implementation) ---
 {srs_content}
 
+--- Verification Engineer's Test Guide (element IDs, DOM facts, mock patterns, known pitfalls) ---
+{test_guide}
+
 --- Current verification.test.js (Jest — logic layer, no browser) ---
 {jest_tests}
 
@@ -117,6 +121,7 @@ Your tasks:
 2. Replace each stub with real, working test assertions that verify the requirement is met.
 3. Follow these rules:
    - Write tests against the SRS requirements — do not test implementation details
+   - Use the Test Guide (above) for correct element IDs, selectors, color formats, and known pitfalls
    - Match the existing test style exactly (indentation, describe/it structure, mock patterns)
    - Jest tests: use pure JS logic, no browser, mock external dependencies
    - Playwright tests: use page mocks for SunCalc and network calls (follow existing mock patterns)
