@@ -38,10 +38,12 @@ jobs:
       - name: Get diff against main
         run: |
           git fetch origin main
-          # Core diff: requirements, VTM, and implementation files only (no SDLC scripts/workflows)
-          git diff origin/main..HEAD -- FTM-SRS-001.md traceability-matrix.txt index.html src/ > /tmp/core.diff
-          # Test diff: verification test files only
-          git diff origin/main..HEAD -- '__tests_verify__/' > /tmp/tests.diff
+          # Core diff: requirements, VTM, implementation files, and docs (incl. inspection records)
+          git diff origin/main..HEAD -- FTM-SRS-001.md traceability-matrix.txt index.html src/ docs/ > /tmp/core.diff
+          # Jest unit test diff (separate — small)
+          git diff origin/main..HEAD -- '__tests_verify__/verification.test.js' > /tmp/tests_jest.diff
+          # Playwright spec diff (separate — large)
+          git diff origin/main..HEAD -- '__tests_verify__/verification.spec.js' > /tmp/tests_spec.diff
 
       - name: Run SDLC Session 5
         env:

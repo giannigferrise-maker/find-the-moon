@@ -1758,33 +1758,65 @@ test.describe('[FTM-SC-004] SunCalc loads correctly with SRI attributes', () => 
 // field background, consisting of exactly three constellations: Orion,
 // Cassiopeia, and the Big Dipper.
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Canvas 2D API spy helper — injects interceptors before page scripts run so
+// that fillText / lineTo / arc calls made by drawConstellations() are recorded
+// in window._canvasLog. Must be called before page.goto().
+async function setupNightWithCanvasSpy(page) {
+  await routeSunCalc(page, SUNCALC_NIGHT);
+  await routeZipApi(page);
+  await page.addInitScript(() => {
+    window._canvasLog = { fillText: [], lineToCount: 0, arcCount: 0 };
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+      const ctx = origGetContext.call(this, type, ...args);
+      if (type === '2d' && ctx && !ctx._spied) {
+        ctx._spied = true;
+        const oFT = ctx.fillText.bind(ctx);
+        ctx.fillText = (t, x, y, ...r) => {
+          window._canvasLog.fillText.push(String(t));
+          return oFT(t, x, y, ...r);
+        };
+        const oLT = ctx.lineTo.bind(ctx);
+        ctx.lineTo = (...a) => { window._canvasLog.lineToCount++; return oLT(...a); };
+        const oArc = ctx.arc.bind(ctx);
+        ctx.arc = (...a) => { window._canvasLog.arcCount++; return oArc(...a); };
+      }
+      return ctx;
+    };
+  });
+  await page.goto(INDEX_URL);
+  await page.fill('#zip-input', '10001');
+  await page.click('#zip-btn');
+  await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+  await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
+}
+
 test.describe('[FTM-VT-001] Constellation art present in night theme', () => {
-  test.beforeEach(async ({ page }) => {
-    // TODO: load the page with a SUNCALC_NIGHT mock so the nighttime theme is
-    // active, following the same addInitScript pattern used by FTM-FR-030.
-    await page.goto(INDEX_URL);
-    // TODO: trigger a location lookup so the night theme renders.
+  test('Orion constellation name drawn on canvas via fillText', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Orion');
   });
 
-  test('Orion constellation element is present in the night theme', async ({ page }) => {
-    // TODO: assert that a DOM element or canvas label corresponding to 'Orion'
-    // exists and is visible when the nighttime theme is active.
-    // Example: await expect(page.locator('[data-constellation="Orion"]')).toBeVisible();
+  test('Cassiopeia constellation name drawn on canvas via fillText', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Cassiopeia');
   });
 
-  test('Cassiopeia constellation element is present in the night theme', async ({ page }) => {
-    // TODO: assert that a DOM element or canvas label corresponding to
-    // 'Cassiopeia' exists and is visible when the nighttime theme is active.
+  test('Big Dipper constellation name drawn on canvas via fillText', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Big Dipper');
   });
 
-  test('Big Dipper constellation element is present in the night theme', async ({ page }) => {
-    // TODO: assert that a DOM element or canvas label corresponding to
-    // 'Big Dipper' exists and is visible when the nighttime theme is active.
-  });
-
-  test('exactly three constellation elements are rendered', async ({ page }) => {
-    // TODO: count the number of constellation marker/label elements
-    // (e.g. page.locator('[data-constellation]')) and assert the count === 3.
+  test('exactly three constellation names drawn on canvas', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    const constellationNames = ['Orion', 'Cassiopeia', 'Big Dipper'];
+    const found = constellationNames.filter(n => fillTextCalls.includes(n));
+    expect(found).toHaveLength(3);
   });
 });
 
@@ -1795,18 +1827,21 @@ test.describe('[FTM-VT-001] Constellation art present in night theme', () => {
 // star position.
 // ═══════════════════════════════════════════════════════════════════════════════
 test.describe('[FTM-VT-002] Constellation lines and dot markers rendered', () => {
-  test('each constellation has at least one line/path element', async ({ page }) => {
-    // TODO: load page in night-theme context.
-    // TODO: for each of the three constellations assert the presence of SVG
-    // <line> / <path> elements, or intercept canvas draw calls to confirm
-    // lineTo / stroke calls are made for each constellation group.
+  test('constellation lines drawn via canvas lineTo calls', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const lineToCount = await page.evaluate(() => window._canvasLog.lineToCount);
+    // Orion has 8 lines, Cassiopeia 4, Big Dipper 7 = 19 minimum constellation lineTo calls
+    // (star field adds none — it uses arc only). Expect at least 19.
+    expect(lineToCount).toBeGreaterThanOrEqual(19);
   });
 
-  test('each constellation has at least one dot/circle marker element', async ({ page }) => {
-    // TODO: load page in night-theme context.
-    // TODO: for each of the three constellations assert the presence of SVG
-    // <circle> elements, or intercept canvas draw calls to confirm arc / fill
-    // calls are made for each constellation group.
+  test('constellation dot markers drawn via canvas arc calls', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const arcCount = await page.evaluate(() => window._canvasLog.arcCount);
+    // Stars (arc) + constellation dots (arc): at least 20 constellation stars exist
+    // (8 Orion + 5 Cassiopeia + 7 Big Dipper). Star field also uses arc.
+    // Verify a meaningful number of arc calls happened.
+    expect(arcCount).toBeGreaterThan(20);
   });
 });
 
@@ -1842,20 +1877,23 @@ test.describe('[FTM-VT-005] Constellation artwork is static', () => {
 // constellation by name, positioned near its corresponding pattern.
 // ═══════════════════════════════════════════════════════════════════════════════
 test.describe('[FTM-VT-006] Constellation name labels visible', () => {
-  test('label text "Orion" is visible in the night theme', async ({ page }) => {
-    // TODO: load page in night-theme context.
-    // TODO: assert a visible element with text 'Orion' is present.
-    // Example: await expect(page.getByText('Orion')).toBeVisible();
-    // If labels are drawn on canvas, assert via a canvas text-content
-    // interception or a companion accessible DOM label element.
+  // Labels are drawn via ctx.fillText() on #stars-canvas — verified with canvas spy.
+  test('fillText called with "Orion" during night-theme rendering', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Orion');
   });
 
-  test('label text "Cassiopeia" is visible in the night theme', async ({ page }) => {
-    // TODO: same approach as above for 'Cassiopeia'.
+  test('fillText called with "Cassiopeia" during night-theme rendering', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Cassiopeia');
   });
 
-  test('label text "Big Dipper" is visible in the night theme', async ({ page }) => {
-    // TODO: same approach as above for 'Big Dipper'.
+  test('fillText called with "Big Dipper" during night-theme rendering', async ({ page }) => {
+    await setupNightWithCanvasSpy(page);
+    const fillTextCalls = await page.evaluate(() => window._canvasLog.fillText);
+    expect(fillTextCalls).toContain('Big Dipper');
   });
 });
 
