@@ -17,6 +17,34 @@ import anthropic
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+def fix_control_chars(s):
+    """Replace literal control characters inside JSON string values with escape sequences."""
+    result = []
+    in_string = False
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '\\' and in_string:
+            result.append(c)
+            i += 1
+            if i < len(s):
+                result.append(s[i])
+            i += 1
+            continue
+        if c == '"':
+            in_string = not in_string
+            result.append(c)
+        elif in_string and c == '\n':
+            result.append('\\n')
+        elif in_string and c == '\r':
+            result.append('\\r')
+        elif in_string and c == '\t':
+            result.append('\\t')
+        else:
+            result.append(c)
+        i += 1
+    return ''.join(result)
+
 def extract_json(text, message=None):
     """Extract and parse JSON from Claude's response, repairing common issues."""
     # Search for { followed by whitespace then a quote — skips { inside code blocks
@@ -34,6 +62,7 @@ def extract_json(text, message=None):
         pass
     cleaned = re.sub(r'//[^\n]*', '', json_str)
     cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)
+    cleaned = fix_control_chars(cleaned)
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
