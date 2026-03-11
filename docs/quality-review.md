@@ -387,3 +387,52 @@ This PR implements constellation art (Orion, Cassiopeia, Big Dipper) for the nig
 - Add `Closes #35` to the PR body.
 - Resolve the duplicate test descriptions in the FTM-FR-031 Jest describe block.
 - Document CI network access requirements for FTM-SC-004 live SRI tests, or add a `page.route()` intercept to serve SunCalc locally during CI runs.
+
+
+## Quality Review — Issue #37: Cloud color lavender → sage green
+
+| Field | Value |
+|---|---|
+| **Review Date** | 2026-03-14 |
+| **Issue** | #37 |
+| **Change Summary** | Update daytime cloud fill color from soft lavender (#c9b8e8) to soft sage green (#a8d5a2) |
+| **Artifacts Reviewed** | FTM-SRS-001.md, index.html, traceability-matrix.txt, verification.test.js, verification.spec.js, docs/security-review.md |
+| **Framework** | ISO 62304 (adapted, non-medical) |
+| **Overall Verdict** | **PASS — Ready to merge with documented warnings** |
+
+### Findings Summary
+
+| # | Activity | Severity | Title |
+|---|---|---|---|
+| 1 | Requirements Quality §5.2 | PASS | FTM-VT-008 requirement updated correctly and unambiguously |
+| 2 | Requirements Quality §5.2 | WARNING | SRS document version header not updated to reflect Amendment D |
+| 3 | Requirements Quality §5.2 | WARNING | Version numbering gap — no evidence of Amendment C |
+| 4 | Code Quality §5.5 | PASS | Implementation change is minimal, focused, and internally consistent |
+| 5 | Code Quality §5.5 | PASS | No orphaned code changes detected |
+| 6 | Code Quality §5.5 | PASS | Hex color value correctly converts to rgba values used in implementation |
+| 7 | Test Coverage §5.6 | PASS | FTM-VT-008 has comprehensive test coverage at both config and UI layers |
+| 8 | Test Coverage §5.6 | PASS | FTM-VT-009 test coverage maintained for shape/animation invariance |
+| 9 | Test Coverage §5.6 | WARNING | Legacy negative test weakened: white color guard replaced with lavender guard |
+| 10 | Test Coverage §5.6 | WARNING | Duplicate FTM-FR-033 describe blocks in verification.spec.js |
+| 11 | Traceability §5.7 | PASS | Traceability matrix updated consistently with SRS and implementation |
+| 12 | Traceability §5.7 | PASS | No orphaned traceability entries introduced |
+| 13 | Traceability §5.7 | WARNING | Traceability matrix document header still references v1.0 / 2026-02-20 |
+| 14 | Process Compliance | PASS | Security review completed and documented |
+| 15 | Process Compliance | PASS | Change is consistent across all SDLC artifacts |
+| 16 | Process Compliance | WARNING | SRS Amendment D label skips Amendment C with no documented rationale |
+
+### Warnings Requiring Follow-up
+
+1. **SRS version header** — Update FTM-SRS-001.md header block to Version 1.3, Last Updated 2026-03-14.
+2. **Amendment C gap** — Clarify whether Amendment C exists outside this diff or whether the label should be corrected to Amendment C.
+3. **Traceability matrix header** — Update to reference SRS v1.3 / 2026-03-14.
+4. **White cloud negative test** — Consider re-adding a guard asserting cloud color is not white alongside the lavender-absence test.
+5. **Duplicate FTM-FR-033 describe blocks** — Raise a cleanup issue to consolidate the three duplicate Playwright describe blocks for FTM-FR-033.
+
+### Pre-existing Open Issues (not introduced by this PR)
+
+- MEDIUM: Missing SRI integrity attribute on SunCalc CDN script (FTM-SC-001/FTM-SC-004)
+- MEDIUM: Missing HTTP security headers
+- LOW: FTM-SC-004 tests require live CDN network access in CI
+- LOW: Constellation-absence test uses CSS class check rather than label string
+- INFO: FTM-FR-012 compass-direction end-to-end test coverage reduced in prior PR
