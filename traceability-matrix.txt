@@ -602,17 +602,17 @@ Notes       | Assert cloud element bounding box and CSS animation-name match
 
 
 ================================================================================
- SECTION 12 — AMENDMENT C: DAYTIME CLOUD COLOR
+ SECTION 12 — AMENDMENT D: DAYTIME CLOUD COLOR
 ================================================================================
 
 Req ID      | FTM-DC-001
 Title       | Daytime cloud fill color is soft sage green (#a8d5a2)
-Method      | Inspection
-Test File   | N/A — manual code/rendering inspection
-Test Suite  | N/A
-Notes       | Inspector shall confirm that the SVG/canvas or CSS fill value used
-            | for animated daytime clouds is exactly #a8d5a2. Verify no other
-            | color declarations for clouds remain (e.g. previously used lavender).
+Method      | Test
+Test File   | __tests_verify__/verification.test.js
+Test Suite  | [FTM-DC-001] Daytime cloud fill color constant
+Notes       | Assert index.html contains #a8d5a2 (or rgba equivalent rgba(168,213,162))
+            | scoped to the cloud color declaration. Verify no legacy lavender value
+            | (#c9b8e8) remains as the cloud color.
 
 Req ID      | FTM-DC-002
 Title       | Cloud shape, animation timing, and behavior unchanged after color update
