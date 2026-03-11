@@ -202,8 +202,8 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | FTM-VT-006 | The system shall display a text label identifying each constellation by name, positioned near its corresponding pattern | Test |
 | FTM-VT-007 | The constellation artwork and labels shall not obscure or overpower the existing animated star field | Inspection |
 | FTM-VT-008 | The system shall render daytime animated clouds using the fill color #a8d5a2 (soft sage green) | Test |
-| FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Test |
+| FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Inspection |
 
 > **Note on version history:**
 > v1.3 (Mar 14, 2026) — Added Amendment C (FTM-VT-001 through FTM-VT-009): constellation artwork over nighttime star field; initial daytime cloud color set to lavender (#c9b8e8)
-> v1.4 (Mar 14, 2026) — Amendment D: updated FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
+> v1.4 (Mar 14, 2026) — Amendment C updated: FTM-VT-008 cloud fill color changed from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
