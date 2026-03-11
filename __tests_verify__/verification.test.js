@@ -656,14 +656,14 @@ describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
     // Constellation colors are defined as rgba() with the alpha as the 4th value.
     // Extract alphas from the lineColor, dotColor, and textColor constants.
     const rgbaMatches = html.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0\.\d+)\s*\)/g) || [];
-    // Filter to only the ones near constellation code (0.4–0.55 range)
+    // Filter to only the ones near constellation code (0.4–0.50 range)
     const constellationAlphas = rgbaMatches
       .map(m => parseFloat(m.match(/,\s*(0\.\d+)\s*\)$/)[1]))
-      .filter(a => a >= 0.4 && a <= 0.55);
+      .filter(a => a >= 0.4 && a <= 0.50);
     expect(constellationAlphas.length).toBeGreaterThan(0);
     constellationAlphas.forEach(a => {
       expect(a).toBeGreaterThanOrEqual(0.4);
-      expect(a).toBeLessThanOrEqual(0.55);
+      expect(a).toBeLessThanOrEqual(0.50);
     });
   });
 });
