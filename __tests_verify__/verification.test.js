@@ -3,7 +3,7 @@
 /**
  * verification.test.js — Logic-layer verification tests (Jest)
  *
- * Each test is explicitly traced to a requirement ID from FTM-SRS-001 v1.0.
+ * Each test is explicitly traced to a requirement ID from FTM-SRS-001 v1.4.
  * Tests in this file cover requirements whose verification method is
  * "Test" and whose logic can be exercised without a browser.
  *
@@ -22,9 +22,15 @@
  *   FTM-FR-021  Eight named moon phases
  *   FTM-FR-030  Nighttime theme threshold
  *   FTM-FR-031  Daytime theme threshold
+ *   FTM-SC-001  SRI integrity attribute on every external script element
+ *   FTM-SC-002  SRI hash is SHA-384 or SHA-512 base64 digest
+ *   FTM-SC-003  crossorigin=anonymous on SRI-protected script elements
  */
 
 const SunCalc = require('suncalc');
+
+const fs = require('fs');
+const htmlparser2 = require('htmlparser2');
 
 const {
   azimuthToCompass,
@@ -34,6 +40,103 @@ const {
   calcMoon,
   validateZipCode,
 } = require('../src/moonLogic');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-SC-001
+// Requirement: The system shall include a Subresource Integrity (SRI) integrity
+//              attribute on every externally hosted <script> element in index.html
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-SC-001] SRI integrity attribute on every external script element', () => {
+  let externalScripts;
+
+  beforeAll(() => {
+    const html = fs.readFileSync(require('path').resolve(__dirname, '../index.html'), 'utf8');
+    externalScripts = [];
+    const parser = new htmlparser2.Parser({
+      onopentag(name, attrs) {
+        if (name === 'script' && attrs.src && /^https?:\/\//.test(attrs.src)) {
+          externalScripts.push(attrs);
+        }
+      },
+    });
+    parser.write(html);
+    parser.end();
+  });
+
+  it('finds at least one external script element', () => {
+    // TODO: [FTM-SC-001] assert at least one external <script> exists in index.html
+    expect(externalScripts.length).toBeGreaterThan(0);
+  });
+
+  it('every external <script> element has an integrity attribute', () => {
+    // TODO: [FTM-SC-001] assert every external <script> has a non-empty integrity attribute
+    for (const attrs of externalScripts) {
+      expect(attrs).toHaveProperty('integrity');
+      expect(attrs.integrity.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-SC-002
+// Requirement: The SRI hash used in the integrity attribute shall be a SHA-384
+//              or SHA-512 digest of the exact file served by the CDN, encoded
+//              in base64.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-SC-002] SRI hash is SHA-384 or SHA-512 base64 digest', () => {
+  let externalScripts;
+
+  beforeAll(() => {
+    const html = fs.readFileSync(require('path').resolve(__dirname, '../index.html'), 'utf8');
+    externalScripts = [];
+    const parser = new htmlparser2.Parser({
+      onopentag(name, attrs) {
+        if (name === 'script' && attrs.src && /^https?:\/\//.test(attrs.src) && attrs.integrity) {
+          externalScripts.push(attrs);
+        }
+      },
+    });
+    parser.write(html);
+    parser.end();
+  });
+
+  it('every integrity attribute value starts with sha384- or sha512-', () => {
+    // TODO: [FTM-SC-002] assert integrity values use sha384- or sha512- prefix
+    for (const attrs of externalScripts) {
+      expect(attrs.integrity).toMatch(/^(sha384-|sha512-)[A-Za-z0-9+/]+=*$/);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-SC-003
+// Requirement: Every externally hosted <script> element that carries an integrity
+//              attribute shall also carry crossorigin="anonymous".
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-SC-003] crossorigin=anonymous on SRI-protected script elements', () => {
+  let sriScripts;
+
+  beforeAll(() => {
+    const html = fs.readFileSync(require('path').resolve(__dirname, '../index.html'), 'utf8');
+    sriScripts = [];
+    const parser = new htmlparser2.Parser({
+      onopentag(name, attrs) {
+        if (name === 'script' && attrs.src && /^https?:\/\//.test(attrs.src) && attrs.integrity) {
+          sriScripts.push(attrs);
+        }
+      },
+    });
+    parser.write(html);
+    parser.end();
+  });
+
+  it('every SRI-protected external <script> carries crossorigin="anonymous"', () => {
+    // TODO: [FTM-SC-003] assert crossorigin="anonymous" present on every <script> with integrity
+    for (const attrs of sriScripts) {
+      expect(attrs.crossorigin).toBe('anonymous');
+    }
+  });
+});
 
 // Convenience: degrees → radians
 const d2r = deg => deg * Math.PI / 180;

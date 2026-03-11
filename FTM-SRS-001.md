@@ -180,9 +180,9 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 
 | ID | Requirement | Verification |
 |---|---|---|
-| FTM-SC-001 | The system shall include a Subresource Integrity (SRI) `integrity` attribute on every externally hosted `<script>` element in index.html | Inspection |
-| FTM-SC-002 | The SRI hash used in the `integrity` attribute shall be a SHA-384 or SHA-512 digest of the exact file served by the CDN, encoded in base64 | Inspection |
-| FTM-SC-003 | Every externally hosted `<script>` element that carries an `integrity` attribute shall also carry `crossorigin="anonymous"` | Inspection |
+| FTM-SC-001 | The system shall include a Subresource Integrity (SRI) `integrity` attribute on every externally hosted `<script>` element in index.html | Test |
+| FTM-SC-002 | The SRI hash used in the `integrity` attribute shall be a SHA-384 or SHA-512 digest of the exact file served by the CDN, encoded in base64 | Test |
+| FTM-SC-003 | Every externally hosted `<script>` element that carries an `integrity` attribute shall also carry `crossorigin="anonymous"` | Test |
 | FTM-SC-004 | The system shall continue to load and execute the SunCalc.js library (v1.9.0) correctly after the SRI attributes are applied | Test |
 
 > **Note on version history:**
@@ -197,13 +197,13 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | FTM-VT-001 | The system shall draw constellation art over the nighttime star field background, consisting of exactly three constellations: Orion, Cassiopeia, and the Big Dipper | Test |
 | FTM-VT-002 | The system shall render each constellation using thin line segments connecting defined star positions and small dot markers at each star position | Test |
 | FTM-VT-003 | The constellation lines and dot markers shall be rendered at an opacity between 0.4 and 0.5 inclusive | Test |
-| FTM-VT-004 | The constellation lines and dot markers shall be rendered in white or light blue only | Inspection |
+| FTM-VT-004 | The constellation lines and dot markers shall be rendered in white or light blue only | Test |
 | FTM-VT-005 | The constellation artwork shall be static and shall not be animated | Test |
 | FTM-VT-006 | The system shall display a text label identifying each constellation by name, positioned near its corresponding pattern | Test |
-| FTM-VT-007 | The constellation artwork and labels shall not obscure or overpower the existing animated star field | Inspection |
+| FTM-VT-007 | The constellation artwork and labels shall be rendered such that the animated star field behind them remains visible; specifically, the constellation layer shall not cover more than 30% of the star field canvas area | Test |
 | FTM-VT-008 | The system shall render daytime animated clouds using the fill color #a8d5a2 (soft sage green) | Test |
 | FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Test |
 
 > **Note on version history:**
 > v1.3 (Mar 14, 2026) — Added Amendment C (FTM-VT-001 through FTM-VT-009): constellation artwork over nighttime star field; initial daytime cloud color set to lavender (#c9b8e8)
-> v1.4 (Mar 14, 2026) — Amendment D: updated FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
+> v1.4 (Mar 14, 2026) — Amendment C updated: FTM-VT-008 cloud fill color changed from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.

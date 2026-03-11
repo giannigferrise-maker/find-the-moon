@@ -43,6 +43,14 @@
  *   FTM-TG-002  Tilt indicator draws on arc regardless of moon visibility
  *   FTM-TG-003  Tilt feedback text reflects accuracy
  *   FTM-TG-004  Moon below horizon — message shown and tilt indicator active
+ *   FTM-VT-001  Constellation art — exactly three constellations drawn
+ *   FTM-VT-002  Constellation lines and dot markers rendered
+ *   FTM-VT-003  Constellation opacity between 0.4 and 0.5
+ *   FTM-VT-004  Constellation color — white or light blue only
+ *   FTM-VT-005  Constellation artwork is static (not animated)
+ *   FTM-VT-006  Constellation labels displayed near each pattern
+ *   FTM-VT-008  Daytime cloud fill color is #a8d5a2
+ *   FTM-VT-009  Cloud shape and animation unchanged; only fill color changed
  */
 
 const { test, expect } = require('@playwright/test');
@@ -164,6 +172,108 @@ async function routeSunCalc(page, script) {
 }
 
 /** Intercept the Zippopotam.us fetch and return a fixed NYC payload. */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-001
+// Requirement: The system shall draw constellation art over the nighttime star
+//              field background, consisting of exactly three constellations:
+//              Orion, Cassiopeia, and the Big Dipper.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-001] Constellation art — exactly three constellations drawn', () => {
+  test('TODO: verify exactly three constellation groups are rendered on the night canvas', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       query canvas/SVG constellation elements, assert count === 3
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-002
+// Requirement: The system shall render each constellation using thin line
+//              segments connecting defined star positions and small dot markers
+//              at each star position.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-002] Constellation lines and dot markers rendered', () => {
+  test('TODO: verify line segments and dot markers exist for each constellation', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       assert presence of line and dot elements per constellation
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-003
+// Requirement: The constellation lines and dot markers shall be rendered at an
+//              opacity between 0.4 and 0.5 inclusive.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-003] Constellation opacity between 0.4 and 0.5', () => {
+  test('TODO: verify computed opacity of constellation elements is in [0.4, 0.5]', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       read opacity CSS property or canvas globalAlpha, assert range
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-004
+// Requirement: The constellation lines and dot markers shall be rendered in
+//              white or light blue only.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-004] Constellation color — white or light blue only', () => {
+  test('TODO: verify fill and stroke colors of constellation elements are white or light blue', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       read computed color/stroke of constellation elements,
+    //       assert color is #ffffff or a recognized light-blue value
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-005
+// Requirement: The constellation artwork shall be static and shall not be
+//              animated.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-005] Constellation artwork is static (not animated)', () => {
+  test('TODO: verify constellation element positions do not change over time', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       record constellation element positions at t=0 and t=500ms,
+    //       assert positions are identical
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-006
+// Requirement: The system shall display a text label identifying each
+//              constellation by name, positioned near its corresponding pattern.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-006] Constellation labels displayed near each pattern', () => {
+  test('TODO: verify text labels "Orion", "Cassiopeia", and "Big Dipper" are visible on night background', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_NIGHT, load page, supply location,
+    //       assert three label elements containing the constellation names are present
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-008
+// Requirement: The system shall render daytime animated clouds using the fill
+//              color #a8d5a2 (soft sage green).
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-008] Daytime cloud fill color is #a8d5a2', () => {
+  test('TODO: verify cloud elements use fill color #a8d5a2 during daytime theme', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_DAY, load page, supply location,
+    //       read computed fill color of cloud canvas or SVG elements,
+    //       assert color equals #a8d5a2
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-009
+// Requirement: The cloud shape and animation behavior shall remain unchanged
+//              from the pre-amendment daytime theme; only the fill color shall
+//              change.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-009] Cloud shape and animation unchanged; only fill color changed', () => {
+  test('TODO: verify cloud animation is still active and shape properties match baseline after color change', async ({ page }) => {
+    // TODO: route SunCalc to SUNCALC_DAY, load page, supply location,
+    //       assert cloud animation is running and shape dimensions match pre-amendment baseline
+  });
+});
 async function routeZipApi(page) {
   await page.route('**/zippopotam.us/**', route =>
     route.fulfill({ contentType: 'application/json', body: ZIP_API_BODY })
@@ -1923,4 +2033,55 @@ test.describe('[FTM-VT-009] Cloud shape and animation unchanged', () => {
     const durationSeconds = parseFloat(animationDuration);
     expect(durationSeconds).toBeGreaterThan(0);
   });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-FR-033
+// Requirement: The system shall display animated clouds when the daytime theme
+//              is active.
+// Consolidated from three duplicate describe blocks; canonical version.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-FR-033] Animated clouds in daytime theme', () => {
+
+  test('cloud layer element is present in the DOM when the day theme is active', async ({ page }) => {
+    // TODO: Route SunCalc to SUNCALC_DAY mock so the app applies the day theme.
+    // TODO: Navigate to INDEX_URL and trigger a location lookup (e.g. zip 10001).
+    // TODO: Wait for the body element to carry the "day" CSS class.
+    // TODO: Query the cloud layer element (e.g. document.querySelector('.clouds')
+    //       or the element id used by the application for the cloud container).
+    // TODO: Assert that the cloud layer element exists in the DOM and is attached
+    //       (elementHandle should not be null).
+  });
+
+  test('cloud fill color is sage green #a8d5a2 when the day theme is active', async ({ page }) => {
+    // TODO: Route SunCalc to SUNCALC_DAY mock and trigger a day-theme location lookup.
+    // TODO: Wait for the "day" CSS class on <body>.
+    // TODO: Select one representative cloud element (e.g. the first <ellipse> or
+    //       <div> that represents a cloud shape inside the cloud layer).
+    // TODO: Read its computed fill or background-color via
+    //       element.evaluate(el => getComputedStyle(el).fill) or equivalent.
+    // TODO: Assert the computed color resolves to #a8d5a2 / rgb(168, 213, 162).
+  });
+
+  test('cloud animation is active when the day theme is active', async ({ page }) => {
+    // TODO: Route SunCalc to SUNCALC_DAY mock and trigger a day-theme location lookup.
+    // TODO: Wait for the "day" CSS class on <body>.
+    // TODO: Select the cloud layer element.
+    // TODO: Assert that the element has a non-empty CSS animation-name
+    //       (getComputedStyle(el).animationName should not be "none" or empty)
+    //       OR assert that the element carries the CSS class that activates the
+    //       cloud animation (e.g. "animated", "clouds--active"), depending on
+    //       the application implementation.
+  });
+
+  test('cloud layer is absent from the DOM when the night theme is active', async ({ page }) => {
+    // TODO: Route SunCalc to a SUNCALC_NIGHT mock so the app applies the night theme.
+    // TODO: Navigate to INDEX_URL and trigger a location lookup.
+    // TODO: Wait for the body element to carry the "night" CSS class.
+    // TODO: Assert that the cloud layer element is NOT present in the DOM
+    //       (e.g. page.locator('.clouds').count() === 0, or the element has
+    //       display:none / is hidden, depending on application implementation).
+  });
+
 });
