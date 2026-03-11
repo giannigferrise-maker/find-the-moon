@@ -672,22 +672,19 @@ describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FTM-VT-008 (config / logic layer)
 // Requirement: The system shall render daytime animated clouds using the fill
-// color #c9b8e8.
+// color #a8d5a2 (soft sage green).
 // ═══════════════════════════════════════════════════════════════════════════════
 describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
   const fs = require('fs');
   const html = fs.readFileSync('index.html', 'utf8');
 
-  it('index.html contains the lavender cloud color #c9b8e8', () => {
-    // rgba(201,184,232,...) is the CSS equivalent of #c9b8e8
-    expect(html).toMatch(/rgba\(\s*201\s*,\s*184\s*,\s*232/i);
+  it('index.html contains the sage green cloud color #a8d5a2 or rgba(168,213,162)', () => {
+    // rgba(168,213,162,...) is the CSS equivalent of #a8d5a2
+    expect(html).toMatch(/rgba\(\s*168\s*,\s*213\s*,\s*162/i);
   });
 
-  it('cloud color is not the legacy white value', () => {
-    // The .cloud CSS rule must not use white or #ffffff
-    const cloudRule = html.match(/\.cloud\s*\{[^}]+\}/s);
-    expect(cloudRule).not.toBeNull();
-    expect(cloudRule[0]).not.toMatch(/#fff(fff)?\b/i);
-    expect(cloudRule[0]).not.toMatch(/\bwhite\b/i);
+  it('cloud color is not the legacy lavender value #c9b8e8', () => {
+    // The cloud fill must not contain the old lavender color
+    expect(html).not.toMatch(/rgba\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 });

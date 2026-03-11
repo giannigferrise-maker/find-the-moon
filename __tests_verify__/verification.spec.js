@@ -430,7 +430,7 @@ test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
   });
 });
 
-test.describe('[FTM-FR-033] Animated clouds rendered at day with lavender color', () => {
+test.describe('[FTM-FR-033] Animated clouds rendered at day with sage green color', () => {
   test('cloud layer element is present in the DOM when day theme is active', async ({ page }) => {
     // Requirement: the system shall display animated clouds when the daytime theme is active.
     await setupAndEnterZip(page, SUNCALC_DAY);
@@ -439,22 +439,22 @@ test.describe('[FTM-FR-033] Animated clouds rendered at day with lavender color'
     await expect(clouds).toBeAttached({ timeout: 5000 });
   });
 
-  test('cloud fill color is lavender (#c9b8e8) when day theme is active', async ({ page }) => {
-    // Requirement: cloud color shall be soft lavender #c9b8e8 in the daytime theme.
+  test('cloud fill color is sage green (#a8d5a2) when day theme is active', async ({ page }) => {
+    // Requirement: cloud color shall be soft sage green #a8d5a2 in the daytime theme.
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    // CSS uses rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8
-    const lavenderPresent = await page.evaluate(() => {
+    // CSS uses rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
+    const sageGreenPresent = await page.evaluate(() => {
       const allStyles = Array.from(document.styleSheets).flatMap(sheet => {
         try {
           return Array.from(sheet.cssRules).map(r => r.cssText);
         } catch (_) { return []; }
       }).join(' ');
       const inlineStyles = document.documentElement.innerHTML;
-      return allStyles.includes('c9b8e8') || allStyles.includes('rgba(201,184,232') || allStyles.includes('rgba(201, 184, 232')
-        || inlineStyles.includes('c9b8e8') || inlineStyles.includes('rgba(201,184,232') || inlineStyles.includes('rgba(201, 184, 232');
+      return allStyles.includes('a8d5a2') || allStyles.includes('rgba(168,213,162') || allStyles.includes('rgba(168, 213, 162')
+        || inlineStyles.includes('a8d5a2') || inlineStyles.includes('rgba(168,213,162') || inlineStyles.includes('rgba(168, 213, 162');
     });
-    expect(lavenderPresent).toBe(true);
+    expect(sageGreenPresent).toBe(true);
   });
 
   test('cloud layer is not visible when night theme is active', async ({ page }) => {
@@ -511,12 +511,12 @@ test.describe('[FTM-FR-032] Star field and constellation art rendered at night',
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Lavender clouds rendered in the day theme
+// FTM-FR-033  Sage green clouds rendered in the day theme
 // Requirement: The system shall display animated clouds when the daytime
-//              theme is active. Issue #35 changes cloud color to #c9b8e8.
+//              theme is active. Issue #37 changes cloud color to #a8d5a2.
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-033] Lavender animated clouds rendered in the day theme', () => {
+test.describe('[FTM-FR-033] Sage green animated clouds rendered in the day theme', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page, SUNCALC_DAY);
   });
@@ -532,30 +532,30 @@ test.describe('[FTM-FR-033] Lavender animated clouds rendered in the day theme',
     await expect(clouds).toBeVisible({ timeout: 5000 });
   });
 
-  test('cloud fill color is the soft lavender #c9b8e8 in the day theme', async ({ page }) => {
-    // Requirement: cloud color shall be #c9b8e8 (soft lavender) in the day theme.
-    // CSS uses rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8
-    const lavenderPresent = await page.evaluate(() => {
+  test('cloud fill color is the soft sage green #a8d5a2 in the day theme', async ({ page }) => {
+    // Requirement: cloud color shall be #a8d5a2 (soft sage green) in the day theme.
+    // CSS uses rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
+    const sageGreenPresent = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
       for (const sheet of sheets) {
         try {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
             if (rule.cssText && (
-              rule.cssText.toLowerCase().includes('c9b8e8') ||
-              rule.cssText.includes('rgba(201,184,232') ||
-              rule.cssText.includes('rgba(201, 184, 232')
+              rule.cssText.toLowerCase().includes('a8d5a2') ||
+              rule.cssText.includes('rgba(168,213,162') ||
+              rule.cssText.includes('rgba(168, 213, 162')
             )) return true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
       const html = document.documentElement.innerHTML;
-      return html.includes('c9b8e8') || html.includes('rgba(201,184,232') || html.includes('rgba(201, 184, 232');
+      return html.includes('a8d5a2') || html.includes('rgba(168,213,162') || html.includes('rgba(168, 213, 162');
     });
-    expect(lavenderPresent).toBe(true);
+    expect(sageGreenPresent).toBe(true);
   });
 
-  test('cloud shape and animation are still present with the lavender color', async ({ page }) => {
+  test('cloud shape and animation are still present with the sage green color', async ({ page }) => {
     // Requirement: cloud shape and animation remain unchanged — only color changes.
     // Verify the clouds element exists and the day theme is active (animation unchanged).
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
@@ -644,13 +644,13 @@ test.describe('[FTM-FR-032] Night theme — star field and constellation art', (
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Day theme — lavender clouds
+// FTM-FR-033  Day theme — sage green clouds
 // Requirement: The system shall display animated clouds when the daytime theme
 //              is active.
-// Issue #35: cloud fill color changed to soft lavender #c9b8e8.
+// Issue #37: cloud fill color changed to soft sage green #a8d5a2.
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
+test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page, SUNCALC_DAY);
   });
@@ -668,21 +668,21 @@ test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
     expect(cloudCount).toBeGreaterThan(0);
   });
 
-  test('cloud fill color is lavender (#c9b8e8) in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #35): cloud color must be #c9b8e8 (soft lavender).
-    // CSS uses rgba(201,184,232,0.7) — the rgba equivalent of #c9b8e8
+  test('cloud fill color is sage green (#a8d5a2) in the daytime theme', async ({ page }) => {
+    // Requirement (Issue #37): cloud color must be #a8d5a2 (soft sage green).
+    // CSS uses rgba(168,213,162,0.7) — the rgba equivalent of #a8d5a2
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
       if (!cloud) return null;
       const style = window.getComputedStyle(cloud);
       return style.backgroundColor || style.fill || null;
     });
-    expect(cloudColor).toMatch(/rgba?\(201,\s*184,\s*232/i);
+    expect(cloudColor).toMatch(/rgba?\(168,\s*213,\s*162/i);
   });
 
-  test('cloud fill color #c9b8e8 is defined in the page styles', async ({ page }) => {
-    // Requirement (Issue #35): the lavender color must be present in the stylesheet.
-    // CSS encodes it as rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8
+  test('cloud fill color #a8d5a2 is defined in the page styles', async ({ page }) => {
+    // Requirement (Issue #37): the sage green color must be present in the stylesheet.
+    // CSS encodes it as rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
     const colorDefined = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
       for (const sheet of sheets) {
@@ -690,15 +690,15 @@ test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
             if (rule.cssText && (
-              rule.cssText.includes('c9b8e8') ||
-              rule.cssText.includes('rgba(201,184,232') ||
-              rule.cssText.includes('rgba(201, 184, 232')
+              rule.cssText.includes('a8d5a2') ||
+              rule.cssText.includes('rgba(168,213,162') ||
+              rule.cssText.includes('rgba(168, 213, 162')
             )) return true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
       const html = document.documentElement.innerHTML;
-      return html.includes('c9b8e8') || html.includes('rgba(201,184,232') || html.includes('rgba(201, 184, 232');
+      return html.includes('a8d5a2') || html.includes('rgba(168,213,162') || html.includes('rgba(168, 213, 162');
     });
     expect(colorDefined).toBe(true);
   });
@@ -1833,7 +1833,7 @@ test.describe('[FTM-VT-006] Constellation name labels visible', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FTM-VT-008 (UI layer)
 // Requirement: The system shall render daytime animated clouds using the fill
-// color #c9b8e8.
+// color #a8d5a2 (soft sage green).
 // ═══════════════════════════════════════════════════════════════════════════════
 test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
   test.beforeEach(async ({ page }) => {
@@ -1846,24 +1846,22 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
   });
 
-  test('cloud element computed fill color matches #c9b8e8', async ({ page }) => {
-    // Per the Test Guide §5: cloud color is rgba(201, 184, 232, 0.7).
+  test('cloud element computed fill color matches #a8d5a2 (sage green)', async ({ page }) => {
+    // Requirement: cloud color is rgba(168, 213, 162, 0.7) — the rgba equivalent of #a8d5a2.
     // .cloud divs are dynamically created when the day theme is active.
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    // Per the Test Guide: check for rgba(201, 184, 232 pattern
-    expect(bgColor).toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
+    expect(bgColor).toMatch(/rgba?\(\s*168\s*,\s*213\s*,\s*162/i);
   });
 
-  test('cloud fill color is not white (#ffffff)', async ({ page }) => {
+  test('cloud fill color is not the legacy lavender (#c9b8e8)', async ({ page }) => {
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).not.toMatch(/rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)/i);
-    expect(bgColor).not.toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*1\s*\)/i);
+    expect(bgColor).not.toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 });
 
