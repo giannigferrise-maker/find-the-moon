@@ -94,11 +94,18 @@ Issue #{issue_number}: {issue_title}
 {playwright_example}
 
 Your tasks:
-1. Decide whether this issue requires new SRS requirements. If yes, draft them in INCOSE \
-format (shall/should, unique IDs continuing from the last used ID, same table style as \
-the existing SRS).
-2. Draft new traceability matrix entries for any new requirements, following the exact \
-plain-text format used in the existing matrix.
+1. Decide whether this issue requires NEW requirements or UPDATES to existing ones:
+   - NEW feature / behavior not covered anywhere in the SRS → add new requirements in the \
+next available amendment letter, using INCOSE format (shall/should, unique IDs continuing \
+from the last used ID, same table style as the existing SRS).
+   - CHANGE to an existing feature (e.g. a color value, threshold, label, or numeric \
+parameter that is already captured by an existing requirement) → UPDATE the existing \
+requirement in place. Change the value inside the existing row; keep the same requirement \
+ID. Do NOT add a new requirement alongside the old one — that creates conflicting \
+requirements and will break existing tests that reference the old value.
+2. Draft new traceability matrix entries for any truly new requirements (added per task 1 \
+above). If you only updated an existing requirement, update its traceability entry in place \
+rather than appending a new one.
 3. Write test stubs for new/affected requirements:
    - Logic tests (pure JS functions, no browser) → Jest style matching verification.test.js
    - UI/browser tests → Playwright style matching verification.spec.js
@@ -211,6 +218,12 @@ REQUIREMENTS (FTM-SRS-001.md) defects to look for:
   physical hardware behavior).
 - Non-testable requirements: vague "shall" statements with no observable pass/fail criterion.
 - Missing "shall" or "should" language in requirement text.
+- Semantic conflict / duplication: if a newly added requirement describes the same attribute \
+  or behavior as an existing requirement (e.g. two requirements both define the cloud fill \
+  color, or two requirements both define the same threshold), flag it. The new session should \
+  have updated the existing requirement in place rather than adding a duplicate. Fix by \
+  removing the newly added conflicting requirement and updating the original one with the \
+  new value instead.
 
 TRACEABILITY MATRIX defects to look for:
 - Amendment section name doesn't match the SRS amendment letter (e.g. says "Amendment C" \
@@ -258,7 +271,7 @@ Return ONLY valid JSON — no markdown fences, no preamble.
 
     critique_msg = client.messages.create(
         model='claude-sonnet-4-6',
-        max_tokens=4096,
+        max_tokens=8192,
         messages=[{'role': 'user', 'content': critique_prompt}],
     )
 
