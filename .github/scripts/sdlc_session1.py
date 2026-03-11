@@ -112,6 +112,13 @@ rather than appending a new one.
    - Use TODO comments for the test body so an engineer knows what to implement.
 4. Write a 2–3 sentence PR summary.
 
+SCOPE CONSTRAINT — strictly enforced:
+Only add or modify content that is directly necessitated by this issue. Do NOT touch \
+pre-existing requirements, traceability entries, or test stubs from prior amendments \
+even if you notice defects in them. Pre-existing issues belong in separate tickets. \
+If this issue requires no SRS changes at all (e.g. it is a pure code or test cleanup), \
+return empty strings for srs_additions and traceability_additions.
+
 Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
 {{
   "srs_additions": "markdown to append to FTM-SRS-001.md, or empty string",
@@ -204,9 +211,14 @@ for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     critique_prompt = f"""You are a senior requirements engineer reviewing freshly generated \
 requirements, traceability entries, and test stubs for the "Find the Moon" web application.
 
+SCOPE CONSTRAINT: review ONLY the content added or modified by this session — \
+identified by comparing what was there before against what is there now. Do NOT \
+flag or fix defects in pre-existing requirements, traceability entries, or test \
+stubs from prior amendments. Those are out of scope for this review.
+
 Review the documents below for the following defects ONLY:
 
-REQUIREMENTS (FTM-SRS-001.md) defects to look for:
+REQUIREMENTS (FTM-SRS-001.md) defects to look for (in newly added/changed content only):
 - Amendment letter collision: check the existing amendment letters (A, B, C, ...) and verify \
   any new amendment uses the next sequential letter. If Amendment C already exists, a new one \
   must be Amendment D, not Amendment C again.
