@@ -4,9 +4,9 @@
 | Field | Value |
 |---|---|
 | **Document ID** | FTM-SRS-001 |
-| **Version** | 1.1 |
+| **Version** | 1.4 |
 | **Original Date** | February 20, 2026 |
-| **Last Updated** | March 7, 2026 |
+| **Last Updated** | March 14, 2026 |
 | **Standard** | INCOSE Systems Engineering Standard |
 
 ---
@@ -205,4 +205,5 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Test |
 
 > **Note on version history:**
-> v1.3 (Mar 14, 2026) — Amendment D: updated FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
+> v1.3 (Mar 14, 2026) — Added Amendment C (FTM-VT-001 through FTM-VT-009): constellation artwork over nighttime star field; initial daytime cloud color set to lavender (#c9b8e8)
+> v1.4 (Mar 14, 2026) — Amendment D: updated FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
