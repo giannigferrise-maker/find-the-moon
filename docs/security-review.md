@@ -317,3 +317,19 @@ No security vulnerabilities found. The changes are purely presentational (CSS co
 1. **SRI/SunCalc tests now live (LOW):** Three previously stubbed FTM-SC-004 tests are now real assertions against the live cdnjs CDN. CI must have network access or a properly configured route intercept. See recommendation in findings.
 2. **Weakened constellation-absence test (LOW):** Day-theme constellation test now checks CSS class rather than label string absence. Regression-detection fidelity reduced but no security impact.
 3. **FTM-FR-012 test coverage reduced (INFO):** Two compass-direction end-to-end tests were removed. Not a security issue but reduces functional requirement traceability — confirm unit test coverage is adequate.
+
+
+### 2026-03-14 — Issue #37: Cloud color lavender → sage green
+
+**Reviewer:** Claude Sonnet 4.6 
+**Files reviewed:** `index.html`, `FTM-SRS-001.md`, `traceability-matrix.txt`, `__tests_verify__/verification.spec.js`, `__tests_verify__/verification.test.js`, `.github/sdlc_pr_body.md` 
+**Verdict:** PASS — no new security findings
+
+This change is purely cosmetic (CSS background color `rgba(201,184,232,0.7)` → `rgba(168,213,162,0.7)`). Security review confirmed:
+
+- No new code logic, no new inputs processed, no new outputs produced.
+- No new external dependencies, CDN references, or third-party scripts introduced.
+- Static string literals only; no user-controlled data flows into the modified style strings.
+- No privacy or COPPA impact; no personal data touched.
+- All documentation, test, and traceability artifacts updated consistently with the implementation change.
+- Pre-existing MEDIUM findings (SRI on SunCalc CDN; missing HTTP security headers) remain open and unaffected by this PR.
