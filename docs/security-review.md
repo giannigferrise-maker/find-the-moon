@@ -294,3 +294,26 @@ No security vulnerabilities introduced. The changes are purely presentational: c
 1. **Restore FTM-TEST-GUIDE.md** (or merge its content into a replacement doc) with updated §4 constellation facts.
 2. **Restore FTM-FR-012 compass direction tests**, fixing the selector from `#moon-dir` to `#direction-text`.
 3. **Confirm Issue #14 (SRI fix) is closed** by a prior merged PR; if not, restore the `Closes #14` reference.
+
+
+---
+
+### Security Review — Issue #35: Visual Theme Update (Constellation Art + Lavender Clouds)
+**Date:** 2026-03-14  
+**Reviewer:** Claude Sonnet 4.6  
+**Branch:** issue-35-visual-themes  
+**Scope:** index.html (CSS cloud color, drawConstellations canvas function), FTM-SRS-001.md (Amendment C), __tests_verify__/verification.spec.js
+
+#### Verdict: PASS
+
+No security vulnerabilities found. The changes are purely presentational (CSS color substitution and Canvas 2D hardcoded drawing). Key security properties verified:
+
+- **No XSS risk:** Constellation labels are hardcoded string literals rendered via Canvas 2D `fillText()`, not inserted into the DOM as HTML.
+- **No new external dependencies:** No new CDN scripts, no new fetch/XHR calls. Existing SRI-protected SunCalc tag is unchanged.
+- **COPPA compliance maintained:** No new data collection, no new network requests, no new storage access introduced.
+- **No injection surface:** Constellation coordinate data is hardcoded numeric arrays; no dynamic parsing of untrusted input.
+
+#### Low-severity observations:
+1. **SRI/SunCalc tests now live (LOW):** Three previously stubbed FTM-SC-004 tests are now real assertions against the live cdnjs CDN. CI must have network access or a properly configured route intercept. See recommendation in findings.
+2. **Weakened constellation-absence test (LOW):** Day-theme constellation test now checks CSS class rather than label string absence. Regression-detection fidelity reduced but no security impact.
+3. **FTM-FR-012 test coverage reduced (INFO):** Two compass-direction end-to-end tests were removed. Not a security issue but reduces functional requirement traceability — confirm unit test coverage is adequate.
