@@ -653,15 +653,16 @@ describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
   });
 
   it('constellation rgba colors use opacity between 0.4 and 0.5', () => {
-    // Constellation colors are defined as rgba() with the alpha as the 4th value.
-    // Extract alphas from the lineColor, dotColor, and textColor constants.
-    const rgbaMatches = html.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0\.\d+)\s*\)/g) || [];
-    // Filter to only the ones near constellation code (0.4–0.50 range)
-    const constellationAlphas = rgbaMatches
-      .map(m => parseFloat(m.match(/,\s*(0\.\d+)\s*\)$/)[1]))
-      .filter(a => a >= 0.4 && a <= 0.50);
-    expect(constellationAlphas.length).toBeGreaterThan(0);
-    constellationAlphas.forEach(a => {
+    // Scope scan to drawConstellations() body only — avoids false positives from
+    // unrelated rgba values elsewhere in index.html that happen to share this range.
+    const fnStart = html.indexOf('function drawConstellations()');
+    const fnEnd   = html.indexOf('\nfunction ', fnStart + 1);
+    const fnBody  = fnStart >= 0 ? html.slice(fnStart, fnEnd > fnStart ? fnEnd : fnStart + 4000) : '';
+    expect(fnBody.length).toBeGreaterThan(0); // drawConstellations must exist
+    const rgbaMatches = fnBody.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0\.\d+)\s*\)/g) || [];
+    const alphas = rgbaMatches.map(m => parseFloat(m.match(/,\s*(0\.\d+)\s*\)$/)[1]));
+    expect(alphas.length).toBeGreaterThan(0); // at least one rgba color defined
+    alphas.forEach(a => {
       expect(a).toBeGreaterThanOrEqual(0.4);
       expect(a).toBeLessThanOrEqual(0.50);
     });
