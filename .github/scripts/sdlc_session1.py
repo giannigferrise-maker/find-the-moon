@@ -179,4 +179,115 @@ pr_body = f"""## SDLC Session 1: Requirements & Tests
 """
 
 write_file('.github/sdlc_pr_body.md', pr_body)
+
+# ── self-critique loop ────────────────────────────────────────────────────────
+# After writing requirements, VTM entries, and test stubs, ask Claude to review
+# them for common mistakes and apply fixes. Runs up to MAX_CRITIQUE_ROUNDS rounds.
+
+MAX_CRITIQUE_ROUNDS = 2
+
+for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
+    print(f"\nSelf-critique round {round_num}...")
+
+    srs_after           = read_file('FTM-SRS-001.md', max_chars=12000)
+    traceability_after  = read_file('traceability-matrix.txt', max_chars=8000)
+    jest_after          = read_file('__tests_verify__/verification.test.js', max_chars=6000)
+    playwright_after    = read_file('__tests_verify__/verification.spec.js', max_chars=6000)
+
+    critique_prompt = f"""You are a senior requirements engineer reviewing freshly generated \
+requirements, traceability entries, and test stubs for the "Find the Moon" web application.
+
+Review the documents below for the following defects ONLY:
+
+REQUIREMENTS (FTM-SRS-001.md) defects to look for:
+- Amendment letter collision: check the existing amendment letters (A, B, C, ...) and verify \
+  any new amendment uses the next sequential letter. If Amendment C already exists, a new one \
+  must be Amendment D, not Amendment C again.
+- Duplicate requirement IDs: no new ID may match an existing one anywhere in the document.
+- Wrong verification method: if a requirement describes something that can be checked \
+  programmatically (e.g. a specific color value, a DOM element presence, a CSS property, \
+  a file content check), it should be marked Test not Inspection. Reserve Inspection for \
+  things that genuinely require human visual/manual review (e.g. subjective aesthetics, \
+  physical hardware behavior).
+- Non-testable requirements: vague "shall" statements with no observable pass/fail criterion.
+- Missing "shall" or "should" language in requirement text.
+
+TRACEABILITY MATRIX defects to look for:
+- Amendment section name doesn't match the SRS amendment letter (e.g. says "Amendment C" \
+  but SRS now says "Amendment D").
+- Any requirement with Method = Test that has Test File = N/A or Test Suite = N/A. \
+  Every Test-method requirement must reference a real test file and suite name.
+- Any requirement with Method = Inspection that has a test stub — remove the stub reference \
+  or correct the method.
+- VTM suite name doesn't match the describe block name in the test stubs.
+
+TEST STUBS defects to look for:
+- Any Test-method requirement with no corresponding TODO stub in the test files.
+- Stubs using wrong test framework (e.g. Playwright-style in verification.test.js, \
+  or Jest-style in verification.spec.js).
+
+--- FTM-SRS-001.md ---
+{srs_after}
+
+--- traceability-matrix.txt ---
+{traceability_after}
+
+--- verification.test.js (last 6000 chars) ---
+{jest_after}
+
+--- verification.spec.js (last 6000 chars) ---
+{playwright_after}
+
+If you find NO defects, return:
+{{"fixes": [], "critique_summary": "No defects found."}}
+
+If you find defects, return a JSON object with exact string replacements:
+{{
+  "fixes": [
+    {{
+      "file": "FTM-SRS-001.md or traceability-matrix.txt or __tests_verify__/verification.test.js or __tests_verify__/verification.spec.js",
+      "old_string": "exact verbatim text to replace",
+      "new_string": "corrected replacement"
+    }}
+  ],
+  "critique_summary": "brief description of what was fixed"
+}}
+
+Return ONLY valid JSON — no markdown fences, no preamble.
+"""
+
+    critique_msg = client.messages.create(
+        model='claude-sonnet-4-6',
+        max_tokens=4096,
+        messages=[{'role': 'user', 'content': critique_prompt}],
+    )
+
+    critique_text = critique_msg.content[0].text
+    critique_data = extract_json(critique_text, critique_msg)
+
+    fixes = critique_data.get('fixes', [])
+    print(f"Critique: {critique_data.get('critique_summary', '')}")
+
+    if not fixes:
+        print("No defects found — stopping critique loop.")
+        break
+
+    applied_fixes = 0
+    for fix in fixes:
+        file_path = fix.get('file', '')
+        old_string = fix.get('old_string', '')
+        new_string = fix.get('new_string', '')
+        if not file_path or not old_string:
+            print(f"WARNING: Skipped fix — missing file or old_string.")
+            continue
+        content = read_file(file_path)
+        if old_string not in content:
+            print(f"WARNING: Skipped fix for {file_path} — old_string not found.")
+            continue
+        updated = content.replace(old_string, new_string, 1)
+        write_file(file_path, updated)
+        print(f"Patched {file_path}")
+        applied_fixes += 1
+    print(f"Applied {applied_fixes}/{len(fixes)} fix(es) from critique round {round_num}.")
+
 print("Done.")
