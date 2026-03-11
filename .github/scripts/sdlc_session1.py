@@ -270,18 +270,22 @@ MAX_CRITIQUE_ROUNDS = 2
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
-    srs_after           = read_file('FTM-SRS-001.md', max_chars=12000)
-    traceability_after  = read_file('traceability-matrix.txt', max_chars=8000)
-    jest_after          = read_file('__tests_verify__/verification.test.js', max_chars=6000)
-    playwright_after    = read_file('__tests_verify__/verification.spec.js', max_chars=6000)
+    # Pass only what this session generated — not the full files.
+    # This ensures the self-critique literally cannot see or touch pre-existing content.
+    srs_new          = data.get('srs_additions', '').strip()
+    traceability_new = traceability_text.strip()  # already guardrailed
+    jest_new         = jest_code.strip()           # already guardrailed
+    pw_new           = pw_code.strip()             # already guardrailed
+
+    if not any([srs_new, traceability_new, jest_new, pw_new]):
+        print("Nothing was added this session — skipping self-critique.")
+        break
 
     critique_prompt = f"""You are a senior requirements engineer reviewing freshly generated \
 requirements, traceability entries, and test stubs for the "Find the Moon" web application.
 
-SCOPE CONSTRAINT: review ONLY the content added or modified by this session — \
-identified by comparing what was there before against what is there now. Do NOT \
-flag or fix defects in pre-existing requirements, traceability entries, or test \
-stubs from prior amendments. Those are out of scope for this review.
+You are seeing ONLY the content added by this session. Pre-existing content is not shown. \
+Review only what is below — do not speculate about or reference anything outside this content.
 
 Review the documents below for the following defects ONLY:
 
@@ -318,17 +322,17 @@ TEST STUBS defects to look for:
 - Stubs using wrong test framework (e.g. Playwright-style in verification.test.js, \
   or Jest-style in verification.spec.js).
 
---- FTM-SRS-001.md ---
-{srs_after}
+--- FTM-SRS-001.md (newly added content only) ---
+{srs_new if srs_new else '(nothing added)'}
 
---- traceability-matrix.txt ---
-{traceability_after}
+--- traceability-matrix.txt (newly added content only) ---
+{traceability_new if traceability_new else '(nothing added)'}
 
---- verification.test.js (last 6000 chars) ---
-{jest_after}
+--- verification.test.js (newly added content only) ---
+{jest_new if jest_new else '(nothing added)'}
 
---- verification.spec.js (last 6000 chars) ---
-{playwright_after}
+--- verification.spec.js (newly added content only) ---
+{pw_new if pw_new else '(nothing added)'}
 
 If you find NO defects, return:
 {{"fixes": [], "critique_summary": "No defects found."}}
