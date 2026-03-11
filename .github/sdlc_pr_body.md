@@ -1,7 +1,7 @@
 ## SDLC Session 2: Code Implementation
 
 ## Summary
-Implements Issue #35: updates the day theme cloud color from white to soft lavender (#c9b8e8) by replacing the rgba(255,255,255,...) values in both the CSS rule and the JS cloud builder with rgba(201,184,232,...). Also adds a drawConstellations() function called from drawStars() that renders Orion, Cassiopeia, and the Big Dipper as static, low-opacity (0.42–0.50) line-and-dot overlays with small text labels on top of the existing animated star field.
+Updates the daytime animated cloud fill color from lavender (rgba(201,184,232,0.7)) to soft sage green (#a8d5a2, rgba(168,213,162,0.7)) as requested in issue #37. The change is applied to both the CSS `.cloud` base style and the dynamically-created blob elements in `renderClouds()`, ensuring all cloud parts render in the new color. No other visual properties, animations, or behaviors are affected.
 
 ## Changes
 - Modified `index.html`
@@ -10,7 +10,7 @@ Implements Issue #35: updates the day theme cloud color from white to soft laven
 - Round 1: No defects found.
 
 ## Unit Tests
-- Maintenance: All code changes are confined to index.html (CSS cloud color update from white to lavender, and constellation drawing in the star field canvas) — no logic changes were made to src/moonLogic.js. Unit tests cover pure JS logic only, so no test additions or updates are required.
+- Maintenance: The code change only updates a CSS background color value in index.html (from rgba(201,184,232,0.7) to rgba(168,213,162,0.7)) with no changes to any logic in src/moonLogic.js. Unit tests cover pure JavaScript logic, not DOM styling, so no test additions or modifications are required.
 - Result: All unit tests passed on first run.
 
 ## Review checklist
