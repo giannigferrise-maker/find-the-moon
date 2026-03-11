@@ -134,7 +134,8 @@ token        = os.environ.get('GH_TOKEN', '')
 repo         = os.environ.get('REPO', '')
 
 core_diff_content     = read_file('/tmp/core.diff', max_chars=30000)
-tests_diff_content    = read_file('/tmp/tests.diff', max_chars=30000)
+tests_jest_diff       = read_file('/tmp/tests_jest.diff', max_chars=10000)
+tests_spec_diff       = read_file('/tmp/tests_spec.diff', max_chars=40000)
 srs_content           = read_file('FTM-SRS-001.md', max_chars=10000)
 traceability_content  = read_file('traceability-matrix.txt', max_chars=12000)
 
@@ -149,11 +150,15 @@ This review maps the development process to ISO 62304 software lifecycle activit
 Issue #{issue_number}: {issue_title}
 {issue_body}
 
---- Git diff: requirements, VTM, and implementation files (FTM-SRS-001.md, traceability-matrix.txt, index.html, src/) ---
+--- Git diff: requirements, VTM, implementation, and docs (FTM-SRS-001.md, traceability-matrix.txt, index.html, src/, docs/) ---
 {core_diff_content}
 
---- Git diff: verification test files (__tests_verify__/) ---
-{tests_diff_content}
+--- Git diff: Jest unit tests (verification.test.js) ---
+{tests_jest_diff}
+
+--- Git diff: Playwright browser tests (verification.spec.js) ---
+{tests_spec_diff}
+
 
 --- Software Requirements Specification (FTM-SRS-001) ---
 {srs_content}
