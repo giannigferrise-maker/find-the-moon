@@ -17,6 +17,34 @@ import anthropic
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+def fix_control_chars(s):
+    """Replace literal control characters inside JSON string values with escape sequences."""
+    result = []
+    in_string = False
+    i = 0
+    while i < len(s):
+        c = s[i]
+        if c == '\\' and in_string:
+            result.append(c)
+            i += 1
+            if i < len(s):
+                result.append(s[i])
+            i += 1
+            continue
+        if c == '"':
+            in_string = not in_string
+            result.append(c)
+        elif in_string and c == '\n':
+            result.append('\\n')
+        elif in_string and c == '\r':
+            result.append('\\r')
+        elif in_string and c == '\t':
+            result.append('\\t')
+        else:
+            result.append(c)
+        i += 1
+    return ''.join(result)
+
 def extract_json(text, message=None):
     """Extract and parse JSON from Claude's response, repairing common issues."""
     # Search for { followed by whitespace then a quote — skips { inside code blocks
@@ -34,6 +62,7 @@ def extract_json(text, message=None):
         pass
     cleaned = re.sub(r'//[^\n]*', '', json_str)
     cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)
+    cleaned = fix_control_chars(cleaned)
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
@@ -50,6 +79,56 @@ def read_file(path, max_chars=None):
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
+
+def extract_todo_blocks(path, max_chars=25000):
+    """Return the file header + only the describe blocks that contain TODO stubs.
+
+    This keeps the prompt small regardless of file size while ensuring Claude
+    sees every stub that needs filling — even those near the end of a large file.
+    """
+    content = read_file(path)
+    if not content:
+        return ''
+
+    lines = content.splitlines(keepends=True)
+
+    # Collect the file header (imports, helpers, constants) up to the first test.describe
+    header_lines = []
+    first_describe = 0
+    for i, line in enumerate(lines):
+        if 'test.describe(' in line or 'describe(' in line:
+            first_describe = i
+            break
+        header_lines.append(line)
+
+    # Walk describe blocks and keep ones that contain TODO
+    blocks = []
+    i = first_describe
+    while i < len(lines):
+        if 'test.describe(' in lines[i] or (i == first_describe and 'describe(' in lines[i]):
+            # Collect this block until brace depth returns to 0
+            depth = 0
+            block = []
+            for j in range(i, len(lines)):
+                block.append(lines[j])
+                depth += lines[j].count('{') - lines[j].count('}')
+                if depth <= 0 and j > i:
+                    i = j + 1
+                    break
+            else:
+                i = len(lines)
+            block_text = ''.join(block)
+            if 'TODO' in block_text:
+                blocks.append(block_text)
+        else:
+            i += 1
+
+    if not blocks:
+        return ''.join(header_lines) + '\n// (no TODO stubs found in this file)\n'
+
+    result = ''.join(header_lines) + '\n// ... (non-TODO tests omitted for brevity) ...\n\n'
+    result += '\n'.join(blocks)
+    return result[:max_chars]
 
 def write_file(path, content):
     os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
@@ -91,7 +170,9 @@ issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 srs_content       = read_file('FTM-SRS-001.md', max_chars=10000)
 test_guide        = read_file('FTM-TEST-GUIDE.md', max_chars=8000)
 jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=30000)
-playwright_tests  = read_file('__tests_verify__/verification.spec.js', max_chars=20000)
+# For the Playwright spec (103KB+) send only header + TODO-containing describe blocks
+# so Claude sees every stub regardless of where it falls in the file.
+playwright_tests  = extract_todo_blocks('__tests_verify__/verification.spec.js', max_chars=25000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +231,7 @@ client = anthropic.Anthropic()
 
 message = client.messages.create(
     model='claude-sonnet-4-6',
-    max_tokens=8192,
+    max_tokens=16000,
     messages=[{'role': 'user', 'content': prompt}],
 )
 
