@@ -64,20 +64,12 @@ jobs:
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
 
-      - name: Run Jest verification tests
-        run: npx jest --config jest.verify.config.js --forceExit
-
-      - name: Run Playwright verification tests
-        continue-on-error: true
-        run: npx playwright test --config playwright.verify.config.js __tests_verify__/verification.spec.js
-
       - name: Notify issue — Session 3 complete
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
-          ✅ **SDLC Session 3 complete** — Verification tests written and passing.
+          gh issue comment ${{ github.event.issue.number }} --body "$(cat session3-summary.md)"
 
-          **Next step:** Apply label \`4-security-ready\` to trigger security review.
-          EOF
-          )"
+      - name: Fail workflow if tests did not pass
+        run: python3 -c "import json,sys; d=json.load(open('session3-status.json')); sys.exit(0 if d['all_passed'] else 1)"

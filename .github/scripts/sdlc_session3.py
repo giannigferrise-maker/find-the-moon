@@ -13,6 +13,7 @@ requirements, not against what the code happens to do today.
 import os
 import re
 import json
+import subprocess
 import anthropic
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -134,6 +135,27 @@ def write_file(path, content):
     os.makedirs(os.path.dirname(path), exist_ok=True) if os.path.dirname(path) else None
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content)
+
+def apply_fix_replacement(file_path, old_string, new_string):
+    """Apply a fix replacement in the test-failure repair loop.
+
+    No TODO guard — we are fixing test code that may already be passing-but-wrong,
+    not replacing stubs. The caller is responsible for ensuring only test authoring
+    mistakes are fixed, never weakened assertions.
+    """
+    content = read_file(file_path)
+    if not content:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    if old_string not in content:
+        raise ValueError(f"old_string not found in {file_path}:\n{old_string[:200]}")
+    updated = content.replace(old_string, new_string, 1)
+    write_file(file_path, updated)
+    print(f"Fix applied: {file_path}")
+
+def run_command(cmd):
+    """Run a shell command; return (returncode, combined stdout+stderr)."""
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return result.returncode, result.stdout + result.stderr
 
 def apply_replacement(file_path, old_string, new_string):
     content = read_file(file_path)
@@ -394,3 +416,145 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         except ValueError as e:
             print(f"WARNING: Skipped critique fix — {e}")
     print(f"Applied {applied_fixes}/{len(fixes)} fix(es) from critique round {round_num}.")
+
+# ── run tests + fix loop ──────────────────────────────────────────────────────
+# Run Jest and Playwright. If either fails, ask Claude whether the failure is a
+# test authoring mistake or an app bug. Fix only authoring mistakes; flag app bugs.
+# Never weaken an assertion to make a test pass.
+
+MAX_TEST_FIX_ROUNDS = 2
+
+FIX_RULES = """STRICT RULES — read carefully before proposing any fix:
+- Fix ONLY test authoring mistakes: wrong element IDs or selectors, missing await,
+  wrong mock pattern, incorrect value format (e.g. browser returns 'rgb(168, 213, 162)'
+  but test expects '#a8d5a2'), missing page.goto(), timeout too short, syntax error.
+- NEVER change what a test is asserting to match broken app behavior.
+- NEVER weaken an assertion (e.g. loosening a regex, removing an expect call).
+- NEVER change an expected value just because the app currently returns something different.
+- If a failure shows the APP is not meeting a requirement, record it in "app_bugs" and
+  leave "fixes" empty for that failure. The app must be fixed in Session 2, not here."""
+
+def run_fix_loop(suite_label, test_file, run_cmd, rc, output):
+    passed = rc == 0
+    print(f"\n{'✅' if passed else '❌'} {suite_label}: {'PASSED' if passed else 'FAILED'}")
+    if passed:
+        return True, output
+
+    app_bugs_seen = []
+
+    for fix_round in range(1, MAX_TEST_FIX_ROUNDS + 1):
+        print(f"\n{suite_label} fix round {fix_round}...")
+        test_content = read_file(test_file, max_chars=30000)
+
+        fix_prompt = f"""You are a test engineer debugging a failing test suite for the \
+"Find the Moon" web application.
+
+{FIX_RULES}
+
+--- Test failure output ---
+{output[-4000:]}
+
+--- {test_file} ---
+{test_content}
+
+Return ONLY valid JSON — no markdown fences, no preamble:
+{{
+  "fixes": [
+    {{
+      "file": "{test_file}",
+      "old_string": "exact verbatim text to replace",
+      "new_string": "corrected replacement"
+    }}
+  ],
+  "app_bugs": ["describe each failure that is an app bug, not a test bug"],
+  "summary": "brief description of changes"
+}}
+If there are no test authoring errors to fix, return:
+{{"fixes": [], "app_bugs": ["..."], "summary": "No test authoring errors found."}}
+"""
+        fix_msg = client.messages.create(
+            model='claude-sonnet-4-6',
+            max_tokens=8192,
+            messages=[{'role': 'user', 'content': fix_prompt}],
+        )
+        fix_data = extract_json(fix_msg.content[0].text, fix_msg)
+
+        app_bugs = [b for b in fix_data.get('app_bugs', []) if b]
+        if app_bugs:
+            app_bugs_seen.extend(app_bugs)
+            print(f"App bugs flagged: {app_bugs}")
+
+        fixes = fix_data.get('fixes', [])
+        if not fixes:
+            print(f"No test authoring errors found — leaving {suite_label} failures as-is.")
+            break
+
+        applied = 0
+        for fix in fixes:
+            try:
+                apply_fix_replacement(fix['file'], fix['old_string'], fix['new_string'])
+                applied += 1
+            except (ValueError, FileNotFoundError) as e:
+                print(f"WARNING: Skipped fix — {e}")
+        print(f"Applied {applied}/{len(fixes)} {suite_label} fix(es).")
+
+        rc, output = run_command(run_cmd)
+        passed = rc == 0
+        print(f"{suite_label} after fix round {fix_round}: {'PASSED' if passed else 'FAILED'}")
+        if passed:
+            break
+
+    return passed, output
+
+
+print("\nRunning Jest tests...")
+jest_rc, jest_output = run_command(
+    'npx jest --config jest.verify.config.js --forceExit 2>&1')
+jest_passed, jest_output = run_fix_loop(
+    'Jest', '__tests_verify__/verification.test.js',
+    'npx jest --config jest.verify.config.js --forceExit 2>&1',
+    jest_rc, jest_output)
+
+print("\nRunning Playwright tests...")
+pw_rc, pw_output = run_command(
+    'npx playwright test --config playwright.verify.config.js'
+    ' __tests_verify__/verification.spec.js 2>&1')
+pw_passed, pw_output = run_fix_loop(
+    'Playwright', '__tests_verify__/verification.spec.js',
+    'npx playwright test --config playwright.verify.config.js'
+    ' __tests_verify__/verification.spec.js 2>&1',
+    pw_rc, pw_output)
+
+# ── write summary for workflow PR comment ─────────────────────────────────────
+
+all_passed = jest_passed and pw_passed
+
+summary_lines = [
+    f"{'✅' if all_passed else '❌'} **SDLC Session 3 — Test Results**",
+    "",
+    f"- Jest (unit/logic):      {'✅ PASSED' if jest_passed else '❌ FAILED'}",
+    f"- Playwright (browser/UI): {'✅ PASSED' if pw_passed else '❌ FAILED'}",
+]
+
+if not all_passed:
+    summary_lines += [
+        "",
+        "⚠️ One or more suites failed. Failures that are **app bugs** must be fixed in "
+        "Session 2 before proceeding.",
+        "Failures that are **test authoring errors** were attempted above; see workflow "
+        "logs for details.",
+    ]
+else:
+    summary_lines += [
+        "",
+        "**Next step:** Apply label `4-security-ready` to trigger security review.",
+    ]
+
+summary_md = '\n'.join(summary_lines)
+with open('session3-summary.md', 'w') as f:
+    f.write(summary_md)
+
+with open('session3-status.json', 'w') as f:
+    json.dump({'all_passed': all_passed}, f)
+
+print('\n' + summary_md)
