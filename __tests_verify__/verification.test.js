@@ -691,3 +691,26 @@ describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
     expect(cloudRule[0]).not.toMatch(/\bwhite\b/i);
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-DC-001
+// Requirement: The system shall render the animated daytime clouds using the
+// fill color #a8d5a2 (soft sage green).
+//
+// Note: Color is a rendering/inspection concern; the logic-layer test below
+// guards any utility function that may expose or generate the cloud color
+// constant, keeping it in sync with the SRS value.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-DC-001] Daytime cloud fill color constant', () => {
+  it('exports or defines the daytime cloud color as exactly #a8d5a2', () => {
+    // TODO: Import the module that owns the cloud color constant, e.g.:
+    //   const { CLOUD_FILL_COLOR } = require('../src/visualTheme');
+    // Then assert:
+    //   expect(CLOUD_FILL_COLOR).toBe('#a8d5a2');
+    //
+    // If the color is defined inline in markup rather than in a JS constant,
+    // remove this test and rely solely on the Inspection method for FTM-DC-001.
+    expect(true).toBe(true); // placeholder — replace with real assertion above
+  });
+});

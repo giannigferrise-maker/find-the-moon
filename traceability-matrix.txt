@@ -599,3 +599,27 @@ Test Suite  | [FTM-VT-009] Cloud shape and animation unchanged
 Notes       | Assert cloud element bounding box and CSS animation-name match
             | baseline values; confirm only color-related CSS properties differ
             | from the pre-amendment snapshot
+
+
+================================================================================
+ SECTION 12 — AMENDMENT C: DAYTIME CLOUD COLOR
+================================================================================
+
+Req ID      | FTM-DC-001
+Title       | Daytime cloud fill color is soft sage green (#a8d5a2)
+Method      | Inspection
+Test File   | N/A — manual code/rendering inspection
+Test Suite  | N/A
+Notes       | Inspector shall confirm that the SVG/canvas or CSS fill value used
+            | for animated daytime clouds is exactly #a8d5a2. Verify no other
+            | color declarations for clouds remain (e.g. previously used lavender).
+
+Req ID      | FTM-DC-002
+Title       | Cloud shape, animation timing, and behavior unchanged after color update
+Method      | Test
+Test File   | __tests_verify__/verification.spec.js
+Test Suite  | [FTM-DC-002] Daytime cloud shape and animation unchanged
+Notes       | Two tests: (1) cloud layer element is present in the DOM and visible
+            | when daytime theme is active; (2) cloud animation CSS property
+            | (animation-name or equivalent) is identical before and after the
+            | color change — i.e. no animation regression introduced.

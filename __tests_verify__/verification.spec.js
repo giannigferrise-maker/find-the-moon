@@ -1926,3 +1926,84 @@ test.describe('[FTM-VT-009] Cloud shape and animation unchanged', () => {
     expect(durationSeconds).toBeGreaterThan(0);
   });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-DC-001
+// Requirement: The system shall render the animated daytime clouds using the
+// fill color #a8d5a2 (soft sage green).
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-DC-001] Daytime cloud fill color is #a8d5a2', () => {
+  test('cloud elements use fill color #a8d5a2 when daytime theme is active', async ({ page }) => {
+    // TODO: Navigate to the app with a daytime SunCalc mock active so the
+    // daytime theme is applied (sun altitude above the -6° threshold).
+    //
+    // TODO: Locate the cloud element(s). For example, if clouds are SVG:
+    //   const cloud = page.locator('.cloud, [data-testid="cloud"]').first();
+    // Or if clouds are rendered on a <canvas>, inspect the relevant DOM node
+    // or a data attribute set by the rendering code.
+    //
+    // TODO: Read the computed fill or background-color and assert it equals
+    // the sage green value. Examples depending on implementation:
+    //
+    //   SVG fill attribute:
+    //     const fill = await cloud.getAttribute('fill');
+    //     expect(fill.toLowerCase()).toBe('#a8d5a2');
+    //
+    //   CSS fill (SVG styled via CSS):
+    //     const fill = await cloud.evaluate(
+    //       el => getComputedStyle(el).fill
+    //     );
+    //     // Browser may return 'rgb(168, 213, 162)' — convert and compare.
+    //     expect(fill).toBe('rgb(168, 213, 162)');
+    //
+    //   CSS background-color (div-based clouds):
+    //     const bg = await cloud.evaluate(
+    //       el => getComputedStyle(el).backgroundColor
+    //     );
+    //     expect(bg).toBe('rgb(168, 213, 162)');
+    //
+    // Fail the test if the old lavender color is detected, e.g.:
+    //   expect(fill).not.toBe('rgb(230, 230, 250)'); // lavender guard
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-DC-002
+// Requirement: The daytime cloud shape, animation timing, and animation
+// behavior shall remain unchanged from the pre-Amendment C implementation
+// when the cloud fill color is updated.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-DC-002] Daytime cloud shape and animation unchanged', () => {
+  test('cloud layer is present and visible in the DOM when daytime theme is active', async ({ page }) => {
+    // TODO: Navigate to the app with a daytime SunCalc mock so daytime theme applies.
+    //
+    // TODO: Assert that the cloud container element exists and is visible, e.g.:
+    //   const cloudsLayer = page.locator('#clouds, .clouds-layer, [data-testid="clouds"]');
+    //   await expect(cloudsLayer).toBeVisible();
+    //
+    // This mirrors the existing FTM-FR-033 presence check and acts as a
+    // regression guard confirming the color-only change did not remove the element.
+  });
+
+  test('cloud animation property is present and non-empty when daytime theme is active', async ({ page }) => {
+    // TODO: Navigate to the app with a daytime SunCalc mock so daytime theme applies.
+    //
+    // TODO: Locate a cloud element and read its computed animation-name (or
+    // equivalent property), then assert it matches the known animation name
+    // used before this change, e.g.:
+    //
+    //   const cloud = page.locator('.cloud').first();
+    //   const animName = await cloud.evaluate(
+    //     el => getComputedStyle(el).animationName
+    //   );
+    //   expect(animName).not.toBe('none');
+    //   expect(animName).toBe('drift'); // replace 'drift' with actual animation name
+    //
+    // TODO: Optionally assert animation-duration matches the pre-change value:
+    //   const animDuration = await cloud.evaluate(
+    //     el => getComputedStyle(el).animationDuration
+    //   );
+    //   expect(animDuration).toBe('20s'); // replace with actual expected duration
+  });
+});

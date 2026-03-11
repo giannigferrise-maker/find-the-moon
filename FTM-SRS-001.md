@@ -203,3 +203,15 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | FTM-VT-007 | The constellation artwork and labels shall not obscure or overpower the existing animated star field | Inspection |
 | FTM-VT-008 | The system shall render daytime animated clouds using the fill color #c9b8e8 (soft lavender) | Test |
 | FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Test |
+
+
+## 12. Amendment C — Daytime Cloud Color Update
+*Added: 2026-03-14*
+
+| ID | Requirement | Verification |
+|---|---|---|
+| FTM-DC-001 | The system shall render the animated daytime clouds using the fill color #a8d5a2 (soft sage green) | Inspection |
+| FTM-DC-002 | The daytime cloud shape, animation timing, and animation behavior shall remain unchanged from the pre-Amendment C implementation when the cloud fill color is updated | Test |
+
+> **Note on version history:**
+> v1.2 (Mar 14, 2026) — Added Amendment C (FTM-DC-001 through FTM-DC-002); updates daytime cloud fill color from lavender to soft sage green (#a8d5a2). No other visual changes.
