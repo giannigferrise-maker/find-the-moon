@@ -154,6 +154,38 @@ message = client.messages.create(
 response_text = message.content[0].text
 data = extract_json(response_text, message)
 
+# ── strip already-covered stubs from test additions (hard guardrail) ───────────
+# Remove any describe blocks for requirement IDs that already have coverage.
+# This is enforced in code — not just in the prompt — to prevent the model
+# from adding duplicate stubs regardless of prompt instructions.
+
+def strip_covered_stubs(code, covered_ids):
+    """Remove test.describe / describe blocks whose ID is in covered_ids."""
+    if not code or not covered_ids:
+        return code
+    lines = code.splitlines(keepends=True)
+    result = []
+    skip_depth = 0
+    for line in lines:
+        if skip_depth == 0:
+            # Check if this line opens a describe block for a covered ID
+            if any(cid in line for cid in covered_ids) and (
+                'test.describe(' in line or 'describe(' in line
+            ):
+                skip_depth = 1
+                continue  # drop this line
+        if skip_depth > 0:
+            skip_depth += line.count('{') - line.count('}')
+            if skip_depth <= 0:
+                skip_depth = 0
+            continue  # drop lines inside the block
+        result.append(line)
+    stripped = ''.join(result)
+    if stripped != code:
+        removed = [cid for cid in covered_ids if cid in code]
+        print(f"Stripped already-covered stubs: {removed}")
+    return stripped
+
 # ── write changes ──────────────────────────────────────────────────────────────
 
 if data.get('srs_additions', '').strip():
@@ -164,12 +196,14 @@ if data.get('traceability_additions', '').strip():
     append_to_file('traceability-matrix.txt', data['traceability_additions'])
     print("Updated traceability-matrix.txt")
 
-if data.get('jest_additions', '').strip():
-    append_to_file('__tests_verify__/verification.test.js', data['jest_additions'])
+jest_code = strip_covered_stubs(data.get('jest_additions', ''), already_covered)
+if jest_code.strip():
+    append_to_file('__tests_verify__/verification.test.js', jest_code)
     print("Updated verification.test.js")
 
-if data.get('playwright_additions', '').strip():
-    append_to_file('__tests_verify__/verification.spec.js', data['playwright_additions'])
+pw_code = strip_covered_stubs(data.get('playwright_additions', ''), already_covered)
+if pw_code.strip():
+    append_to_file('__tests_verify__/verification.spec.js', pw_code)
     print("Updated verification.spec.js")
 
 # ── write PR body ──────────────────────────────────────────────────────────────

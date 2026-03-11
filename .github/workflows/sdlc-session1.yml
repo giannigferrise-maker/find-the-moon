@@ -74,7 +74,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue comment ${{ github.event.issue.number }} --body "$(cat <<'EOF'
-          ✅ **SDLC Session 1 complete** — Requirements updated and test stubs added.
+          ✅ **SDLC Session 1 complete** — Requirements analysis done. See the draft PR for a summary of what was added or changed.
 
           **Next step:** Apply label \`2-code-ready\` to trigger code implementation.
           EOF
