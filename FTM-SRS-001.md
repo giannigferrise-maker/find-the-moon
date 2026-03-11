@@ -197,7 +197,7 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 | FTM-VT-001 | The system shall draw constellation art over the nighttime star field background, consisting of exactly three constellations: Orion, Cassiopeia, and the Big Dipper | Test |
 | FTM-VT-002 | The system shall render each constellation using thin line segments connecting defined star positions and small dot markers at each star position | Test |
 | FTM-VT-003 | The constellation lines and dot markers shall be rendered at an opacity between 0.4 and 0.5 inclusive | Test |
-| FTM-VT-004 | The constellation lines and dot markers shall be rendered in white or light blue only | Inspection |
+| FTM-VT-004 | The constellation lines and dot markers shall be rendered in white or light blue only | Test |
 | FTM-VT-005 | The constellation artwork shall be static and shall not be animated | Test |
 | FTM-VT-006 | The system shall display a text label identifying each constellation by name, positioned near its corresponding pattern | Test |
 | FTM-VT-007 | The constellation artwork and labels shall not obscure or overpower the existing animated star field | Inspection |
@@ -206,4 +206,4 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 
 > **Note on version history:**
 > v1.3 (Mar 14, 2026) — Added Amendment C (FTM-VT-001 through FTM-VT-009): constellation artwork over nighttime star field; initial daytime cloud color set to lavender (#c9b8e8)
-> v1.4 (Mar 14, 2026) — Amendment D: updated FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.
+> v1.4 (Mar 14, 2026) — Amendment C updated in place: revised FTM-VT-008 cloud fill color from lavender (#c9b8e8) to soft sage green (#a8d5a2). No other changes.

@@ -43,6 +43,14 @@
  *   FTM-TG-002  Tilt indicator draws on arc regardless of moon visibility
  *   FTM-TG-003  Tilt feedback text reflects accuracy
  *   FTM-TG-004  Moon below horizon — message shown and tilt indicator active
+ *   FTM-VT-001  Constellation art drawn over nighttime star field
+ *   FTM-VT-002  Constellation line segments and dot markers rendered
+ *   FTM-VT-003  Constellation opacity in range 0.4–0.5
+ *   FTM-VT-004  Constellation color white or light blue
+ *   FTM-VT-005  Constellation artwork is static
+ *   FTM-VT-006  Constellation text labels displayed
+ *   FTM-VT-008  Daytime cloud fill color #a8d5a2
+ *   FTM-VT-009  Cloud shape and animation behavior unchanged
  */
 
 const { test, expect } = require('@playwright/test');
@@ -164,6 +172,116 @@ async function routeSunCalc(page, script) {
 }
 
 /** Intercept the Zippopotam.us fetch and return a fixed NYC payload. */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-001
+// Requirement: The system shall draw constellation art over the nighttime star
+//              field background, consisting of exactly three constellations:
+//              Orion, Cassiopeia, and the Big Dipper.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-001] Constellation art drawn over nighttime star field', () => {
+  test('TODO: verify exactly three constellation groups are rendered when nighttime theme is active', async ({ page }) => {
+    // TODO: route SunCalc night mock, load page, trigger location lookup,
+    // TODO: assert canvas/SVG contains drawing calls or elements for Orion,
+    // TODO: Cassiopeia, and Big Dipper (e.g. check data attributes or label text)
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-002
+// Requirement: The system shall render each constellation using thin line
+//              segments connecting defined star positions and small dot markers
+//              at each star position.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-002] Constellation line segments and dot markers rendered', () => {
+  test('TODO: verify line/path elements and dot markers exist for each constellation', async ({ page }) => {
+    // TODO: route night mock, load page, trigger location lookup,
+    // TODO: assert canvas drawing includes lineTo/arc calls or SVG line/circle elements
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-003
+// Requirement: The constellation lines and dot markers shall be rendered at an
+//              opacity between 0.4 and 0.5 inclusive.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
+  test('TODO: verify globalAlpha or CSS opacity for constellation elements is >= 0.4 and <= 0.5', async ({ page }) => {
+    // TODO: route night mock, load page, trigger location lookup,
+    // TODO: read opacity value from canvas context spy or computed style
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-004
+// Requirement: The constellation lines and dot markers shall be rendered in
+//              white or light blue only.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-004] Constellation color white or light blue', () => {
+  test('TODO: verify strokeStyle/fillStyle is white (#ffffff) or a light blue value', async ({ page }) => {
+    // TODO: route night mock, load page, trigger location lookup,
+    // TODO: assert canvas context color or SVG stroke/fill attribute is white or light blue
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-005
+// Requirement: The constellation artwork shall be static and shall not be
+//              animated.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-005] Constellation artwork is static', () => {
+  test('TODO: verify no animation loop drives constellation drawing', async ({ page }) => {
+    // TODO: route night mock, load page, trigger location lookup,
+    // TODO: spy on requestAnimationFrame and setInterval to confirm constellation
+    // TODO: drawing function is not registered as a recurring callback
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-006
+// Requirement: The system shall display a text label identifying each
+//              constellation by name, positioned near its corresponding pattern.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-006] Constellation text labels displayed', () => {
+  test('TODO: verify labels "Orion", "Cassiopeia", and "Big Dipper" are present when nighttime theme is active', async ({ page }) => {
+    // TODO: route night mock, load page, trigger location lookup,
+    // TODO: assert DOM or canvas fillText calls contain each constellation name
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-008
+// Requirement: The system shall render daytime animated clouds using the fill
+//              color #a8d5a2 (soft sage green).
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-008] Daytime cloud fill color #a8d5a2', () => {
+  test('TODO: verify canvas fillStyle or CSS color for cloud elements equals #a8d5a2 when daytime theme is active', async ({ page }) => {
+    // TODO: route day mock, load page, trigger location lookup,
+    // TODO: intercept canvas fillStyle assignment and assert value is "#a8d5a2"
+    test.fail(); // stub — not yet implemented
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-009
+// Requirement: The cloud shape and animation behavior shall remain unchanged
+//              from the pre-amendment daytime theme; only the fill color shall
+//              change.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.describe('[FTM-VT-009] Cloud shape and animation behavior unchanged', () => {
+  test('TODO: verify cloud animation interval, path shape parameters, and count match pre-amendment baseline', async ({ page }) => {
+    // TODO: route day mock, load page, trigger location lookup,
+    // TODO: assert setInterval timing, cloud count, and bezier path control points
+    // TODO: match documented baseline values; only fillStyle should differ
+    test.fail(); // stub — not yet implemented
+  });
+});
 async function routeZipApi(page) {
   await page.route('**/zippopotam.us/**', route =>
     route.fulfill({ contentType: 'application/json', body: ZIP_API_BODY })
