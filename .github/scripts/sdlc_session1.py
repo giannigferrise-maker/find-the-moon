@@ -70,6 +70,17 @@ traceability_content  = read_file('traceability-matrix.txt', max_chars=6000)
 jest_example          = read_file('__tests_verify__/verification.test.js', max_chars=3000)
 playwright_example    = read_file('__tests_verify__/verification.spec.js', max_chars=3000)
 
+def extract_covered_req_ids(path):
+    """Return sorted list of req IDs that already have a describe block."""
+    import re
+    content = read_file(path)
+    return set(re.findall(r'\[FTM-[A-Z]+-\d+\]', content))
+
+already_covered = sorted(
+    extract_covered_req_ids('__tests_verify__/verification.test.js') |
+    extract_covered_req_ids('__tests_verify__/verification.spec.js')
+)
+
 # ── prompt ────────────────────────────────────────────────────────────────────
 
 prompt = f"""You are a software requirements and test engineer for the "Find the Moon" web \
@@ -110,6 +121,8 @@ rather than appending a new one.
    - Logic tests (pure JS functions, no browser) → Jest style matching verification.test.js
    - UI/browser tests → Playwright style matching verification.spec.js
    - Use TODO comments for the test body so an engineer knows what to implement.
+   - The following requirement IDs already have test coverage — do NOT add stubs for them:
+     {', '.join(already_covered)}
 4. Write a 2–3 sentence PR summary.
 
 SCOPE CONSTRAINT — strictly enforced:
