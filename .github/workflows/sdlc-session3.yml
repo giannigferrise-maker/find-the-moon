@@ -43,7 +43,7 @@ jobs:
       - name: Sync SDLC scripts from main
         run: |
           git fetch origin main
-          git checkout origin/main -- .github/scripts/ .github/workflows/
+          git checkout origin/main -- .github/scripts/ .github/workflows/ FTM-TEST-GUIDE.md
 
       - name: Run SDLC Session 3
         env:
