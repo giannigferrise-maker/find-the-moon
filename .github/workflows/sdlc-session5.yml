@@ -38,7 +38,10 @@ jobs:
       - name: Get diff against main
         run: |
           git fetch origin main
-          git diff origin/main..HEAD > /tmp/branch.diff
+          # Core diff: requirements, VTM, and implementation files only (no SDLC scripts/workflows)
+          git diff origin/main..HEAD -- FTM-SRS-001.md traceability-matrix.txt index.html src/ > /tmp/core.diff
+          # Test diff: verification test files only
+          git diff origin/main..HEAD -- '__tests_verify__/' > /tmp/tests.diff
 
       - name: Run SDLC Session 5
         env:

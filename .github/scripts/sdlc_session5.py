@@ -133,9 +133,10 @@ issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 token        = os.environ.get('GH_TOKEN', '')
 repo         = os.environ.get('REPO', '')
 
-diff_content          = read_file('/tmp/branch.diff', max_chars=20000)
-srs_content           = read_file('FTM-SRS-001.md', max_chars=8000)
-traceability_content  = read_file('traceability-matrix.txt', max_chars=8000)
+core_diff_content     = read_file('/tmp/core.diff', max_chars=30000)
+tests_diff_content    = read_file('/tmp/tests.diff', max_chars=30000)
+srs_content           = read_file('FTM-SRS-001.md', max_chars=10000)
+traceability_content  = read_file('traceability-matrix.txt', max_chars=12000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 
@@ -148,8 +149,11 @@ This review maps the development process to ISO 62304 software lifecycle activit
 Issue #{issue_number}: {issue_title}
 {issue_body}
 
---- Git diff of all changes on this branch vs main ---
-{diff_content}
+--- Git diff: requirements, VTM, and implementation files (FTM-SRS-001.md, traceability-matrix.txt, index.html, src/) ---
+{core_diff_content}
+
+--- Git diff: verification test files (__tests_verify__/) ---
+{tests_diff_content}
 
 --- Software Requirements Specification (FTM-SRS-001) ---
 {srs_content}
