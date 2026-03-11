@@ -907,7 +907,8 @@ function drawConstellations() {
     });
 
     const [lx, ly] = pts[c.labelStar];
-    starsCtx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--font').trim() || '11px sans-serif';
+    const fontFamily = getComputedStyle(document.body).getPropertyValue('--font').trim() || 'sans-serif';
+    starsCtx.font = '11px ' + fontFamily;
     starsCtx.fillStyle = textColor;
     starsCtx.textAlign = 'center';
     starsCtx.fillText(c.name, lx, ly + 14);
