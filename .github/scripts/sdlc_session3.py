@@ -201,6 +201,18 @@ Your tasks:
 1. Find any TODO stubs related to this issue in either test file.
 2. Replace each stub with real, working test assertions that verify the requirement is met.
 3. Follow these rules:
+
+   MINDSET — think like an adversary, not a confirmer:
+   - Your goal is NOT to write tests that pass against the current implementation. Your goal is
+     to write tests that would FAIL if the requirement was violated or the feature was removed.
+   - For every test you write, ask yourself: "If a developer deleted the code implementing this
+     requirement tomorrow, would my test catch it?" If the answer is no, the test provides no value.
+   - You have intentionally not seen the implementation — write tests from the requirement alone.
+     Do not assume anything about how the feature is built; test the observable behavior.
+   - Prefer specific, targeted assertions over broad ones. A test that could pass due to unrelated
+     code elsewhere is a false positive waiting to happen.
+
+   CORRECTNESS:
    - Write tests against the SRS requirements — do not test implementation details
    - Use the Test Guide (above) for correct element IDs, selectors, color formats, and known pitfalls
    - Match the existing test style exactly (indentation, describe/it structure, mock patterns)
@@ -317,6 +329,22 @@ PLAYWRIGHT defects to look for:
 BOTH files:
 - Unterminated strings or template literals.
 - Any `TODO` that was supposed to be replaced but wasn't.
+
+TEST ROBUSTNESS defects to look for (adversarial — ask "would this test catch a regression?"):
+- Any test that reads an entire source file (e.g. index.html) and asserts on values anywhere \
+  in that file, when the requirement only covers a specific function or section. Example: scanning \
+  all rgba() values in index.html to verify constellation opacity — this passes even if the \
+  constellation code is deleted, because other rgba values in the same range exist elsewhere. \
+  Fix: scope the scan to the relevant function body (e.g. extract the drawConstellations() \
+  function body first, then scan within it).
+- Any test that checks innerHTML, textContent, or page.content() for strings that are drawn \
+  on a canvas element. Canvas draw calls (fillText, arc, lineTo) leave no DOM trace — \
+  innerHTML checks will pass even if the canvas rendering is broken or never runs. \
+  Fix: use a canvas API spy injected via page.addInitScript() that records fillText/arc/lineTo \
+  calls, then assert on those recorded calls.
+- Any test that only verifies a DOM element exists or is attached, when the requirement is \
+  about the content or behavior rendered inside that element. Presence ≠ correct rendering. \
+  Fix: add an assertion on the element's content, computed style, or canvas draw calls.
 
 --- verification.test.js ---
 {jest_after}
