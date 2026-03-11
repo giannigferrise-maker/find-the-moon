@@ -187,3 +187,19 @@ Requirements in this document are written in accordance with INCOSE Systems Engi
 
 > **Note on version history:**
 > v1.2 (Mar 7, 2026) — Added Amendment B (FTM-SC-001 through FTM-SC-004); total requirements now 54
+
+
+## 12. Amendment C — Visual Theme Update Requirements
+*Added: 2026-03-14*
+
+| ID | Requirement | Verification |
+|---|---|---|
+| FTM-VT-001 | The system shall draw constellation art over the nighttime star field background, consisting of exactly three constellations: Orion, Cassiopeia, and the Big Dipper | Test |
+| FTM-VT-002 | The system shall render each constellation using thin line segments connecting defined star positions and small dot markers at each star position | Test |
+| FTM-VT-003 | The constellation lines and dot markers shall be rendered at an opacity between 0.4 and 0.5 inclusive | Test |
+| FTM-VT-004 | The constellation lines and dot markers shall be rendered in white or light blue only | Inspection |
+| FTM-VT-005 | The constellation artwork shall be static and shall not be animated | Test |
+| FTM-VT-006 | The system shall display a text label identifying each constellation by name, positioned near its corresponding pattern | Test |
+| FTM-VT-007 | The constellation artwork and labels shall not obscure or overpower the existing animated star field | Inspection |
+| FTM-VT-008 | The system shall render daytime animated clouds using the fill color #c9b8e8 (soft lavender) | Test |
+| FTM-VT-009 | The cloud shape and animation behavior shall remain unchanged from the pre-amendment daytime theme; only the fill color shall change | Test |

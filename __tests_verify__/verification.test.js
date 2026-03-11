@@ -393,13 +393,28 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
   });
 
   it('identifies day when sun altitude is positive (sun above horizon)', () => {
-    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(45) });
+    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(30) });
     expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
   });
 
-  it('returns false (day) for real solar noon conditions in New York in summer', () => {
+  it('returns false (day) for real noon UTC conditions in New York in summer', () => {
     // Integration: real SunCalc; 17:00 UTC = 13:00 EDT in July
     expect(isNighttime(new Date('2025-07-15T17:00:00Z'), 40.7128, -74.006)).toBe(false);
+  });
+
+  it('identifies day when sun altitude is 0° (at the horizon)', () => {
+    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(0) });
+    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
+  });
+
+  it('identifies day when sun altitude is positive (sun above horizon)', () => {
+    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(30) });
+    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
+  });
+
+  it('returns false (day) for real noon UTC conditions in New York in summer', () => {
+    // Integration: real SunCalc; 16:00 UTC = 12:00 EDT in July
+    expect(isNighttime(new Date('2025-07-15T16:00:00Z'), 40.7128, -74.006)).toBe(false);
   });
 });
 
@@ -583,24 +598,17 @@ describe('[FTM-SC-002] SRI hash is a valid SHA-384 or SHA-512 base64 digest', ()
   });
 
   it('optionally verifies the SHA-384 digest matches the locally cached suncalc.min.js', () => {
-    // TODO: If a local copy of suncalc.min.js is available under
-    //       vendor/suncalc.min.js (or similar), read it, compute its
-    //       SHA-384 digest with Node's crypto module, base64-encode it,
-    //       prepend "sha384-", and compare to the integrity attribute.
-    //       Skip gracefully (test.skip) when no local copy is present.
-    //
-    // Example skeleton:
-    //   const crypto = require('crypto');
-    //   const vendor = path.resolve(__dirname, '../vendor/suncalc.min.js');
-    //   if (!fs.existsSync(vendor)) { return; } // skip when not cached
-    //   const digest = crypto.createHash('sha384')
-    //     .update(fs.readFileSync(vendor))
-    //     .digest('base64');
-    //   const expected = `sha384-${digest}`;
-    //   const scripts  = extractExternalScripts(INDEX_HTML);
-    //   const sunCalc  = scripts.find(s => s.src.includes('suncalc'));
-    //   expect(sunCalc.integrity).toBe(expected);
-    expect(true).toBe(true); // remove this line once implemented
+    const crypto = require('crypto');
+    const vendor = path.resolve(__dirname, '../vendor/suncalc.min.js');
+    if (!fs.existsSync(vendor)) { return; } // skip gracefully when no local copy is present
+    const digest = crypto.createHash('sha384')
+      .update(fs.readFileSync(vendor))
+      .digest('base64');
+    const expected = `sha384-${digest}`;
+    const scripts  = extractExternalScripts(INDEX_HTML);
+    const sunCalc  = scripts.find(s => s.src.includes('suncalc'));
+    expect(sunCalc).toBeDefined();
+    expect(sunCalc.integrity).toBe(expected);
   });
 });
 
@@ -627,5 +635,59 @@ describe('[FTM-SC-003] crossorigin attribute present on SRI-protected scripts', 
     expect(sunCalc).toBeDefined();
     expect(sunCalc.crossorigin).toBeDefined();
     expect(sunCalc.crossorigin.toLowerCase()).toBe('anonymous');
+  });
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-003
+// Requirement: The constellation lines and dot markers shall be rendered at an
+// opacity between 0.4 and 0.5 inclusive.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-VT-003] Constellation opacity in range 0.4–0.5', () => {
+  const fs = require('fs');
+  const html = fs.readFileSync('index.html', 'utf8');
+
+  it('index.html contains constellation drawing code', () => {
+    expect(html).toMatch(/constellation/i);
+  });
+
+  it('constellation rgba colors use opacity between 0.4 and 0.5', () => {
+    // Scope scan to drawConstellations() body only — avoids false positives from
+    // unrelated rgba values elsewhere in index.html that happen to share this range.
+    const fnStart = html.indexOf('function drawConstellations()');
+    const fnEnd   = html.indexOf('\nfunction ', fnStart + 1);
+    const fnBody  = fnStart >= 0 ? html.slice(fnStart, fnEnd > fnStart ? fnEnd : fnStart + 4000) : '';
+    expect(fnBody.length).toBeGreaterThan(0); // drawConstellations must exist
+    const rgbaMatches = fnBody.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0\.\d+)\s*\)/g) || [];
+    const alphas = rgbaMatches.map(m => parseFloat(m.match(/,\s*(0\.\d+)\s*\)$/)[1]));
+    expect(alphas.length).toBeGreaterThan(0); // at least one rgba color defined
+    alphas.forEach(a => {
+      expect(a).toBeGreaterThanOrEqual(0.4);
+      expect(a).toBeLessThanOrEqual(0.50);
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FTM-VT-008 (config / logic layer)
+// Requirement: The system shall render daytime animated clouds using the fill
+// color #c9b8e8.
+// ═══════════════════════════════════════════════════════════════════════════════
+describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
+  const fs = require('fs');
+  const html = fs.readFileSync('index.html', 'utf8');
+
+  it('index.html contains the lavender cloud color #c9b8e8', () => {
+    // rgba(201,184,232,...) is the CSS equivalent of #c9b8e8
+    expect(html).toMatch(/rgba\(\s*201\s*,\s*184\s*,\s*232/i);
+  });
+
+  it('cloud color is not the legacy white value', () => {
+    // The .cloud CSS rule must not use white or #ffffff
+    const cloudRule = html.match(/\.cloud\s*\{[^}]+\}/s);
+    expect(cloudRule).not.toBeNull();
+    expect(cloudRule[0]).not.toMatch(/#fff(fff)?\b/i);
+    expect(cloudRule[0]).not.toMatch(/\bwhite\b/i);
   });
 });

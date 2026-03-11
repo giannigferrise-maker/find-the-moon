@@ -264,3 +264,56 @@ No critical, high, or medium findings. Five informational observations noted.
 - The actual `integrity` and `crossorigin` attributes must be verified in `index.html` directly (not modified in this diff). Ensure the hash in `index.html` is a real SHA-384 or SHA-512 digest of the file served by cdnjs and not a placeholder.
 - COPPA compliance is not affected by this diff — no new data collection, no new external calls.
 - No new CDN dependencies introduced.
+
+
+## Security Review — Issue #35 Visual Theme Update
+
+**Date:** 2026-03-14
+**Reviewer:** Claude (automated)
+**Branch:** issue-35-visual-themes
+**Scope:** index.html (constellation canvas drawing, lavender cloud color), FTM-SRS-001.md, FTM-TEST-GUIDE.md, verification.spec.js, .github/sdlc_pr_body.md
+
+### Verdict: PASS (with process findings)
+
+No security vulnerabilities introduced. The changes are purely presentational: constellation art drawn on an existing canvas element using hardcoded coordinates and `ctx.fillText`; cloud fill color changed from white to rgba(201,184,232). No new external dependencies, no new data collection, no XSS surface, no COPPA impact.
+
+### Findings
+
+| Severity | Title | Location |
+|---|---|---|
+| LOW | FTM-TEST-GUIDE.md deleted — test authoring guidance lost | FTM-TEST-GUIDE.md |
+| LOW | Compass direction tests removed — FTM-FR-012 coverage gap | verification.spec.js |
+| INFO | PR body 'Closes #14' removed — verify Issue #14 is already closed | .github/sdlc_pr_body.md |
+| INFO | Canvas innerHTML constellation test correctly replaced with class check | verification.spec.js |
+| INFO | Cloud color test correctly updated to accept rgba equivalents | verification.spec.js |
+| INFO | No new CDN dependencies; existing SRI intact | index.html |
+| INFO | COPPA compliance maintained; no PII introduced | index.html |
+| INFO | No XSS surface; constellation labels use ctx.fillText with hardcoded strings | index.html |
+
+### Action Items Before Merge
+1. **Restore FTM-TEST-GUIDE.md** (or merge its content into a replacement doc) with updated §4 constellation facts.
+2. **Restore FTM-FR-012 compass direction tests**, fixing the selector from `#moon-dir` to `#direction-text`.
+3. **Confirm Issue #14 (SRI fix) is closed** by a prior merged PR; if not, restore the `Closes #14` reference.
+
+
+---
+
+### Security Review — Issue #35: Visual Theme Update (Constellation Art + Lavender Clouds)
+**Date:** 2026-03-14  
+**Reviewer:** Claude Sonnet 4.6  
+**Branch:** issue-35-visual-themes  
+**Scope:** index.html (CSS cloud color, drawConstellations canvas function), FTM-SRS-001.md (Amendment C), __tests_verify__/verification.spec.js
+
+#### Verdict: PASS
+
+No security vulnerabilities found. The changes are purely presentational (CSS color substitution and Canvas 2D hardcoded drawing). Key security properties verified:
+
+- **No XSS risk:** Constellation labels are hardcoded string literals rendered via Canvas 2D `fillText()`, not inserted into the DOM as HTML.
+- **No new external dependencies:** No new CDN scripts, no new fetch/XHR calls. Existing SRI-protected SunCalc tag is unchanged.
+- **COPPA compliance maintained:** No new data collection, no new network requests, no new storage access introduced.
+- **No injection surface:** Constellation coordinate data is hardcoded numeric arrays; no dynamic parsing of untrusted input.
+
+#### Low-severity observations:
+1. **SRI/SunCalc tests now live (LOW):** Three previously stubbed FTM-SC-004 tests are now real assertions against the live cdnjs CDN. CI must have network access or a properly configured route intercept. See recommendation in findings.
+2. **Weakened constellation-absence test (LOW):** Day-theme constellation test now checks CSS class rather than label string absence. Regression-detection fidelity reduced but no security impact.
+3. **FTM-FR-012 test coverage reduced (INFO):** Two compass-direction end-to-end tests were removed. Not a security issue but reduces functional requirement traceability — confirm unit test coverage is adequate.
