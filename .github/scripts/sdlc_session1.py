@@ -114,15 +114,19 @@ parameter that is already captured by an existing requirement) → UPDATE the ex
 requirement in place. Change the value inside the existing row; keep the same requirement \
 ID. Do NOT add a new requirement alongside the old one — that creates conflicting \
 requirements and will break existing tests that reference the old value.
-2. Draft new traceability matrix entries for any truly new requirements (added per task 1 \
-above). If you only updated an existing requirement, update its traceability entry in place \
-rather than appending a new one.
-3. Write test stubs for new/affected requirements:
+2. Draft traceability matrix entries only for requirements newly added to the SRS in this \
+session. Do not add entries for requirements that already exist in the matrix — those are \
+already tracked. If you only updated an existing requirement in place, do not append a new \
+traceability entry; the existing one is still valid.
+3. Write test stubs only for requirements newly added to the SRS in this session AND that \
+do not already have test coverage in the list below. If a requirement already has a test, \
+Session 3 will update it — do not add a duplicate stub:
    - Logic tests (pure JS functions, no browser) → Jest style matching verification.test.js
    - UI/browser tests → Playwright style matching verification.spec.js
    - Use TODO comments for the test body so an engineer knows what to implement.
-   - The following requirement IDs already have test coverage — do NOT add stubs for them:
+   - Already-covered requirement IDs (do NOT add stubs for these):
      {', '.join(already_covered)}
+   - If no new requirements were added, leave jest_additions and playwright_additions empty.
 4. Write a 2–3 sentence PR summary.
 
 SCOPE CONSTRAINT — strictly enforced:
@@ -186,14 +190,30 @@ def strip_covered_stubs(code, covered_ids):
         print(f"Stripped already-covered stubs: {removed}")
     return stripped
 
+def strip_covered_traceability(text, covered_ids):
+    """Remove traceability blocks for requirement IDs that already exist in the matrix."""
+    if not text or not covered_ids:
+        return text
+    # Split on Req ID lines and filter out blocks whose ID is already covered
+    bare_ids = [cid.strip('[]') for cid in covered_ids]
+    blocks = re.split(r'(?=Req ID\s+\|)', text)
+    filtered = [b for b in blocks if not any(bid in b for bid in bare_ids)]
+    stripped = ''.join(filtered)
+    if stripped != text:
+        removed = [bid for bid in bare_ids if bid in text]
+        print(f"Stripped already-covered traceability entries: {removed}")
+    return stripped
+
 # ── write changes ──────────────────────────────────────────────────────────────
 
 if data.get('srs_additions', '').strip():
     append_to_file('FTM-SRS-001.md', data['srs_additions'])
     print("Updated FTM-SRS-001.md")
 
-if data.get('traceability_additions', '').strip():
-    append_to_file('traceability-matrix.txt', data['traceability_additions'])
+traceability_text = strip_covered_traceability(
+    data.get('traceability_additions', ''), already_covered)
+if traceability_text.strip():
+    append_to_file('traceability-matrix.txt', traceability_text)
     print("Updated traceability-matrix.txt")
 
 jest_code = strip_covered_stubs(data.get('jest_additions', ''), already_covered)
