@@ -309,3 +309,81 @@ This PR implements constellation art (Orion, Cassiopeia, Big Dipper) for the nig
 - Add `Closes #35` to the PR body.
 - Resolve the duplicate test descriptions in the FTM-FR-031 Jest describe block.
 - Document CI network access requirements for FTM-SC-004 live SRI tests, or add a network-availability guard.
+
+
+## Quality Review — Issue #35: Update Visual Themes (Canonical Review)
+
+| Field | Value |
+|---|---|
+| **PR / Issue** | Issue #35 — Update visual themes (constellation art at night, lavender clouds by day) |
+| **Review Date** | 2026-03-14 |
+| **Branch** | feature/issue-35-visual-themes |
+| **Reviewer Role** | Quality Engineer |
+| **Framework** | ISO 62304 (adapted, non-medical best-practice) |
+| **Overall Verdict** | ❌ FAIL — Must resolve before merge |
+
+> **Note:** Earlier draft review sections for Issue #35 in this document are superseded by this entry and should be removed.
+
+### Summary
+
+This PR implements constellation art (Orion, Cassiopeia, Big Dipper) for the night theme and lavender cloud color (#c9b8e8) for the day theme. The lavender color change is clean, minimal, and correctly implemented. The constellation implementation is directionally correct but contains a critical architectural defect (opacity accumulation on repeated redraws), a JavaScript operator precedence bug, and Playwright tests for FTM-VT-001/002/005/006 that are trivially passing and do not verify actual canvas rendering. Two FTM-FR-012 UI Playwright suites were deleted without justification, breaking the traceability chain for an active requirement. No inspection records have been provided for the two Inspection-method requirements (FTM-VT-004, FTM-VT-007).
+
+### Findings
+
+| # | Activity | Severity | Title |
+|---|---|---|---|
+| 1 | Requirements Quality §5.2 | ✅ PASS | Amendment C requirements are uniquely identified and well-formed |
+| 2 | Requirements Quality §5.2 | ⚠️ WARNING | SRS version, date, and requirements count not updated for Amendment C |
+| 3 | Requirements Quality §5.2 | ⚠️ WARNING | FTM-VT-007 uses subjective language without a measurable threshold |
+| 4 | Requirements Quality §5.2 | ⚠️ WARNING | FTM-VT-004 'light blue' not quantitatively defined |
+| 5 | Requirements Quality §5.2 | ⚠️ WARNING | FTM-VT-009 'unchanged' lacks a cited baseline version or enumerated attributes |
+| 6 | Code Quality §5.5 | ✅ PASS | Lavender cloud color change is minimal, focused, and correctly implemented |
+| 7 | Code Quality §5.5 | ✅ PASS | drawConstellations() uses canvas save/restore correctly |
+| 8 | Code Quality §5.5 | ❌ FAIL | drawConstellations() called inside drawStars() — opacity accumulation risk on repeated redraws |
+| 9 | Code Quality §5.5 | ⚠️ WARNING | JavaScript operator precedence bug in constellation label font assignment |
+| 10 | Code Quality §5.5 | ⚠️ WARNING | Constellation star positions undocumented and aspect-ratio-sensitive |
+| 11 | Code Quality §5.5 | ❌ FAIL | Two FTM-FR-012 UI Playwright suites deleted with no requirements change or waiver |
+| 12 | Code Quality §5.5 | ⚠️ WARNING | FTM-FR-031 Jest describe block contains duplicate test descriptions |
+| 13 | Test Coverage §5.6 | ❌ FAIL | FTM-VT-001/002/005/006 Playwright tests are trivially passing — canvas rendering not verified |
+| 14 | Test Coverage §5.6 | ❌ FAIL | FTM-FR-012 UI-layer Playwright tests deleted — requirement now untested at UI layer |
+| 15 | Test Coverage §5.6 | ❌ FAIL | FTM-VT-003 Jest test regex is overly broad — false-positive risk from non-constellation rgba values |
+| 16 | Test Coverage §5.6 | ✅ PASS | FTM-VT-008 UI-layer test correctly reads computed background color from .cloud element |
+| 17 | Test Coverage §5.6 | ✅ PASS | FTM-VT-009 cloud animation and shape tests are substantively implemented |
+| 18 | Test Coverage §5.6 | ✅ PASS | FTM-SC-004 placeholder tests fully replaced with real implementations |
+| 19 | Test Coverage §5.6 | ⚠️ WARNING | innerHTML-based lavender color checks in FTM-FR-033 block weaker than computed style |
+| 20 | Test Coverage §5.6 | ⚠️ WARNING | No documented inspection record for FTM-VT-004 and FTM-VT-007 |
+| 21 | Traceability §5.7 | ✅ PASS | All nine Amendment C requirements have VTM entries |
+| 22 | Traceability §5.7 | ❌ FAIL | VTM FTM-FR-012 entry references deleted Playwright suites — traceability chain broken |
+| 23 | Traceability §5.7 | ⚠️ WARNING | VTM document header still references v1.0 / 2026-02-20 |
+| 24 | Traceability §5.7 | ⚠️ WARNING | FTM-VT-001/002/005/006 VTM entries imply verification fidelity not achieved by actual tests |
+| 25 | Process Compliance | ❌ FAIL | No inspection record provided for FTM-VT-004 and FTM-VT-007 |
+| 26 | Process Compliance | ⚠️ WARNING | quality-review.md contains three superseded draft reviews for Issue #35 |
+| 27 | Process Compliance | ⚠️ WARNING | PR body missing 'Closes #35' issue link |
+| 28 | Process Compliance | ⚠️ WARNING | FTM-SC-004 live network tests require CI network access — offline CI will fail |
+| 29 | Process Compliance | ✅ PASS | Change is scoped to Issue #35 with no unrelated functional modifications |
+
+### Required Actions Before Merge
+
+1. **[FAIL-8 — Blocker]** Decouple `drawConstellations()` from `drawStars()` or add a re-entry guard (e.g. a module-level `constellationsDrawn` boolean reset in `clearStars()`) so that repeated calls to `drawStars()` do not repaint constellation art and accumulate opacity. Opacity accumulation directly violates FTM-VT-003 (opacity 0.4–0.5) and FTM-VT-007 (artwork shall not overpower star field).
+
+2. **[FAIL-11 / FAIL-14 / FAIL-22 — Blocker]** Restore the two deleted FTM-FR-012 UI Playwright test suites (`[FTM-FR-012] Compass direction display (UI)` and `[FTM-FR-012] Compass direction display (UI) — additional tests`), or provide an SRS amendment formally removing or modifying FTM-FR-012 and FTM-UR-002 with QE sign-off, and update the VTM FTM-FR-012 entry accordingly. The deletion is unrelated to Issue #35 scope.
+
+3. **[FAIL-13 — Blocker]** Replace trivially-passing FTM-VT-001, FTM-VT-002, FTM-VT-005, and FTM-VT-006 Playwright tests with tests that actually verify constellation rendering on the canvas. Recommended approach: inject a Canvas 2D API spy via `page.addInitScript()` before page load to record `arc()`, `lineTo()`, and `fillText()` calls, then assert that exactly three `fillText()` calls with the constellation names occurred, that `arc()` was called at least eight times (Orion's eight stars), and that `lineTo()` was called with expected coordinates.
+
+4. **[FAIL-15 — Blocker]** Narrow the FTM-VT-003 Jest test regex to target only constellation-specific rgba values rather than all rgba values in index.html. Recommended approach: extract the `drawConstellations` function body from index.html before scanning (e.g. using a regex bounded by the function declaration and closing brace), or export constellation color constants from a dedicated module and import them into the test.
+
+5. **[FAIL-25 — Blocker]** Attach a documented inspection record for FTM-VT-004 and FTM-VT-007 before merge. The record must include: reviewer name, review date, specific code lines reviewed, and a pass/fail determination with supporting notes. For FTM-VT-004 specifically, identify and enumerate the rgba values used for constellation lines (`rgba(180,210,255,0.42)`), dots (`rgba(220,235,255,0.50)`), and labels (`rgba(200,220,255,0.45)`) and confirm they satisfy 'white or light blue'.
+
+### Recommended Actions (Warnings)
+
+- Update SRS to v1.3: increment version number, update last-updated date to 2026-03-14, add VT row to Requirements Summary table (count 9), update total to 63, and add version history note for Amendment C.
+- Fix the JavaScript operator precedence bug: `starsCtx.font = '11px ' + (getComputedStyle(document.body).getPropertyValue('--font').trim() || 'sans-serif');`
+- Add a comment in `drawConstellations()` documenting the fractional coordinate system and the assumed viewport aspect ratio.
+- Add a quantitative definition for 'light blue' in FTM-VT-004 by enumerating the permitted rgba values used in the implementation.
+- Add a cited baseline reference (SRS v1.2 or pre-amendment index.html commit hash) to FTM-VT-009 and enumerate the preserved attributes: border-radius, filter, animation-name, animation-timing-function.
+- Update the VTM document header to reflect SRS v1.3 and generation date 2026-03-14.
+- Update FTM-VT-001/002/005/006 VTM notes to accurately describe what the tests currently verify (DOM/structural checks) versus what is not yet verified (canvas pixel content).
+- Remove the three superseded draft quality review sections for Issue #35 from quality-review.md, retaining only this canonical entry.
+- Add `Closes #35` to the PR body.
+- Resolve the duplicate test descriptions in the FTM-FR-031 Jest describe block.
+- Document CI network access requirements for FTM-SC-004 live SRI tests, or add a `page.route()` intercept to serve SunCalc locally during CI runs.
