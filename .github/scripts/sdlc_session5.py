@@ -299,6 +299,10 @@ if data.get('quality_doc_entry', '').strip():
 # ── post PR comment ───────────────────────────────────────────────────────────
 
 verdict = data.get('verdict', 'UNKNOWN')
+# Guard against model self-contradiction: if any finding is FAIL, verdict must be FAIL
+if verdict == 'PASS' and any(f.get('severity') == 'FAIL' for f in data.get('findings', [])):
+    print("WARNING: Verdict overridden to FAIL — findings contain FAIL severity items.")
+    verdict = 'FAIL'
 pr_comment = data.get('pr_comment', '')
 
 if pr_comment and token and repo:
