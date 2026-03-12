@@ -80,7 +80,12 @@ Human engineers apply each label after reviewing the previous session's output. 
 **Claude's tasks:**
 - Implement the feature or fix described in the issue
 - Ensure the implementation satisfies the requirements from Session 1
-- Write unit tests in `__tests__/` if needed
+- Write or update unit tests in `__tests__/` to cover the change
+
+**Test execution:**
+- After writing code, `npm test` is run against the full `__tests__/` suite
+- If tests fail, a fix loop (up to 2 rounds) asks Claude to fix the code or tests
+- The session does not commit until all unit tests are green
 
 **Writes:**
 - `src/index.html`
@@ -109,6 +114,12 @@ Human engineers apply each label after reviewing the previous session's output. 
 - Replace each TODO stub with real, working test assertions
 - Write tests against requirements, not implementation details (adversarial mindset)
 - Use correct element IDs and selectors from the Test Guide
+
+**Test execution:**
+- After writing tests, both Jest (`__tests_verify__/`) and Playwright (`__tests_verify__/`) suites are run
+- If either suite fails, a fix loop (up to 2 rounds) asks Claude to fix test *authoring* errors only — never app bugs
+- App bugs discovered during this run are flagged in the PR comment and must be fixed in Session 2
+- The session does not pass until both suites are green and no coverage/duplicate issues exist
 
 **Writes:**
 - `__tests_verify__/verification.test.js`
