@@ -48,7 +48,8 @@ jobs:
                   __tests_verify__/verification.test.js \
                   __tests_verify__/verification.spec.js
           if git diff --cached --quiet; then
-            echo "No document changes — pushing branch with no new commits so subsequent sessions can check it out."
+            echo "No document changes — creating empty commit so PR can be opened."
+            git commit --allow-empty -m "SDLC Session 1: no document changes required for issue #${{ github.event.issue.number }}"
           else
             git commit -m "SDLC Session 1: requirements and test stubs for issue #${{ github.event.issue.number }}"
           fi
