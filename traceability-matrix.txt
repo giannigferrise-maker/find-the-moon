@@ -197,9 +197,10 @@ Req ID      | FTM-FR-033
 Title       | Display cloud layer during daytime
 Method      | Test
 Test File   | __tests_verify__/verification.spec.js
-Test Suite  | [FTM-FR-033] Clouds layer present at day
-Notes       | Two tests: #clouds-layer attached to DOM, body.day class present
-            | (CSS activates cloud animation via body.day .clouds selector)
+Test Suite  | [FTM-FR-033] Day theme — sage green animated clouds
+Notes       | Six tests: body.day class present, cloud count > 0 via querySelectorAll,
+            | cloud fill color rgba(168,213,162) via getComputedStyle, sage green color
+            | defined in stylesheet, animationName !== 'none', clouds absent at night
 
 ================================================================================
  SECTION 5 — FUNCTIONAL REQUIREMENTS: MOBILE COMPASS
