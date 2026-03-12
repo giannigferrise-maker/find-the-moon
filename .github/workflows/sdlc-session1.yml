@@ -46,7 +46,8 @@ jobs:
         run: |
           git add FTM-SRS-001.md traceability-matrix.txt \
                   __tests_verify__/verification.test.js \
-                  __tests_verify__/verification.spec.js
+                  __tests_verify__/verification.spec.js \
+                  .github/sdlc_session1_delta.md
           if git diff --cached --quiet; then
             echo "No document changes — creating empty commit so PR can be opened."
             git commit --allow-empty -m "SDLC Session 1: no document changes required for issue #${{ github.event.issue.number }}"

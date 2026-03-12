@@ -228,6 +228,21 @@ if pw_code.strip():
     append_to_file('__tests_verify__/verification.spec.js', pw_code)
     print("Updated verification.spec.js")
 
+# ── write Session 1 delta for Session 2 ───────────────────────────────────────
+# Save the exact requirements added/changed this session to a small file so
+# Session 2 can read the precise delta rather than inferring it from the issue.
+
+srs_delta = data.get('srs_additions', '').strip()
+delta_content = srs_delta if srs_delta else '(no SRS changes — this issue requires no new or updated requirements)'
+write_file('.github/sdlc_session1_delta.md', f"""# Session 1 Requirements Delta — Issue #{issue_number}
+
+The following requirements were added or updated by the requirements engineer
+for this issue. Session 2 must implement exactly these requirements.
+
+{delta_content}
+""")
+print("Wrote .github/sdlc_session1_delta.md")
+
 # ── write PR body ──────────────────────────────────────────────────────────────
 
 pr_summary = data.get('pr_summary', f'SDLC Session 1 output for issue #{issue_number}.')

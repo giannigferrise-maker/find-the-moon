@@ -48,6 +48,7 @@ Human engineers apply each label after reviewing the previous session's output. 
 - `traceability-matrix.txt` — appends new traceability entries
 - `__tests_verify__/verification.test.js` — appends Jest TODO stubs
 - `__tests_verify__/verification.spec.js` — appends Playwright TODO stubs
+- `.github/sdlc_session1_delta.md` — the exact requirements added/changed this session; read by Session 2 as its primary implementation target
 - `.github/sdlc_pr_body.md` — PR description used when opening the draft PR
 
 **Guardrails (code-level, not prompt-only):**
@@ -71,10 +72,10 @@ Human engineers apply each label after reviewing the previous session's output. 
 
 **Reads:**
 - GitHub issue title and body
-- `FTM-SRS-001.md`
+- `.github/sdlc_session1_delta.md` — the exact requirements added/changed by Session 1 for this issue; injected at the top of the prompt so Session 2 implements precisely what the requirements engineer specified
+- `FTM-SRS-001.md` — full SRS for broader context
 - `src/index.html`
 - `src/moonLogic.js`
-- New test stubs from Session 1 (as context for what to implement)
 
 **Claude's tasks:**
 - Implement the feature or fix described in the issue
@@ -185,6 +186,7 @@ Each session is responsible for a specific set of files. Modifying files outside
 |---|---|
 | `FTM-SRS-001.md` | Session 1 |
 | `traceability-matrix.txt` | Session 1 |
+| `.github/sdlc_session1_delta.md` | Session 1 (writes), Session 2 (reads) |
 | `__tests_verify__/verification.test.js` | Session 1 (stubs), Session 3 (implementation) |
 | `__tests_verify__/verification.spec.js` | Session 1 (stubs), Session 3 (implementation) |
 | `src/index.html` | Session 2 |

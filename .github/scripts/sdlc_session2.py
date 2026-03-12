@@ -81,6 +81,7 @@ issue_number = os.environ['ISSUE_NUMBER']
 issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
+srs_delta     = read_file('.github/sdlc_session1_delta.md')
 srs_content   = read_file('FTM-SRS-001.md', max_chars=20000)
 index_html    = read_file('index.html', max_chars=80000)
 moon_logic_js = read_file('src/moonLogic.js', max_chars=15000)
@@ -96,7 +97,10 @@ A GitHub issue is ready for code implementation:
 Issue #{issue_number}: {issue_title}
 {issue_body}
 
---- Current SRS requirements (for context on what must be satisfied) ---
+--- Requirements added/changed by Session 1 for THIS issue (implement these exactly) ---
+{srs_delta}
+
+--- Full SRS (for context on the complete requirement set) ---
 {srs_content}
 
 --- Current index.html (first 30 000 chars) ---
