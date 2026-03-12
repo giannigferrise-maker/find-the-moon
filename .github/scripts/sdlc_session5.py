@@ -290,6 +290,51 @@ if duplicate_ids:
         + data.get('pr_comment', '')
     )
 
+# ── missing test coverage check ───────────────────────────────────────────────
+# Every requirement marked Test in the SRS must have at least one describe block.
+# This is a FAIL-severity finding per ISO 62304 §5.6 — unverified requirements
+# must be resolved before merge.
+
+def get_test_req_ids(srs_path):
+    """Return set of requirement IDs whose Verification method is Test."""
+    id_re = re.compile(r'\|\s*(FTM-[A-Z]+-\d+)\s*\|.*\|\s*Test\s*\|')
+    return {m.group(1) for line in read_file(srs_path).splitlines()
+            for m in [id_re.search(line)] if m}
+
+def get_covered_req_ids(*paths):
+    """Return set of requirement IDs that have at least one describe block."""
+    id_re = re.compile(r'\[FTM-[A-Z]+-\d+\]')
+    covered = set()
+    for path in paths:
+        for line in read_file(path).splitlines():
+            if 'test.describe(' in line or 'describe(' in line:
+                for req_id in id_re.findall(line):
+                    covered.add(req_id.strip('[]'))
+    return covered
+
+missing_coverage = sorted(
+    get_test_req_ids('FTM-SRS-001.md') -
+    get_covered_req_ids('__tests_verify__/verification.test.js',
+                        '__tests_verify__/verification.spec.js')
+)
+if missing_coverage:
+    missing_list = ', '.join(missing_coverage)
+    print(f"FAIL: Missing test coverage for: {missing_list}")
+    data.setdefault('findings', []).insert(0, {
+        'activity': 'Test Coverage (ISO 62304 §5.6)',
+        'severity': 'FAIL',
+        'title': f'Untested requirements: {missing_list}',
+        'description': (
+            f'The following requirements are marked Test in the SRS but have no '
+            f'test.describe block in either test file: {missing_list}. '
+            'Every Test-method requirement must be verified before merge.'
+        ),
+    })
+    data['pr_comment'] = (
+        f'❌ **FAIL — Untested requirements**: {missing_list} have no test coverage.\n\n'
+        + data.get('pr_comment', '')
+    )
+
 # ── write quality doc entry ───────────────────────────────────────────────────
 
 if data.get('quality_doc_entry', '').strip():

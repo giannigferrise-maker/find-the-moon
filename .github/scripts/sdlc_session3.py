@@ -551,9 +551,42 @@ if duplicate_ids:
     print("Each requirement ID must have exactly one test.describe block.")
     print("Consolidate duplicates before proceeding to Session 4.")
 
+# ── missing test coverage check ───────────────────────────────────────────────
+# Every requirement marked Test in the SRS must have at least one describe block
+# in the test files. Flag any gaps as a hard failure — a requirement with no test
+# is a verification gap that must be resolved before proceeding.
+
+def get_test_req_ids(srs_path):
+    """Return set of requirement IDs whose Verification method is Test."""
+    id_re = re.compile(r'\|\s*(FTM-[A-Z]+-\d+)\s*\|.*\|\s*Test\s*\|')
+    return {m.group(1) for line in read_file(srs_path).splitlines()
+            for m in [id_re.search(line)] if m}
+
+def get_covered_req_ids(*paths):
+    """Return set of requirement IDs that have at least one describe block."""
+    id_re = re.compile(r'\[FTM-[A-Z]+-\d+\]')
+    covered = set()
+    for path in paths:
+        for line in read_file(path).splitlines():
+            if 'test.describe(' in line or 'describe(' in line:
+                for req_id in id_re.findall(line):
+                    covered.add(req_id.strip('[]'))
+    return covered
+
+missing_coverage = sorted(
+    get_test_req_ids('FTM-SRS-001.md') -
+    get_covered_req_ids('__tests_verify__/verification.test.js',
+                        '__tests_verify__/verification.spec.js')
+)
+if missing_coverage:
+    missing_list = ', '.join(missing_coverage)
+    print(f"\n❌ MISSING TEST COVERAGE: {missing_list}")
+    print("Every Test-method requirement must have at least one describe block.")
+    print("Add stubs for these requirements before proceeding to Session 4.")
+
 # ── write summary for workflow PR comment ─────────────────────────────────────
 
-all_passed = jest_passed and pw_passed and not duplicate_ids
+all_passed = jest_passed and pw_passed and not duplicate_ids and not missing_coverage
 
 summary_lines = [
     f"{'✅' if all_passed else '❌'} **SDLC Session 3 — Test Results**",
@@ -568,6 +601,12 @@ if duplicate_ids:
         f"- Duplicate test IDs:     ❌ FOUND ({dup_list})",
     ]
 
+if missing_coverage:
+    missing_list = ', '.join(missing_coverage)
+    summary_lines += [
+        f"- Missing test coverage:  ❌ FOUND ({missing_list})",
+    ]
+
 if not all_passed:
     summary_lines += [
         "",
@@ -580,6 +619,11 @@ if not all_passed:
         summary_lines += [
             f"⚠️ **Duplicate test blocks** for {dup_list} must be consolidated into one "
             "describe block per requirement ID.",
+        ]
+    if missing_coverage:
+        summary_lines += [
+            f"⚠️ **Missing test coverage** for {missing_list} — add describe blocks for "
+            "these Test-method requirements.",
         ]
 else:
     summary_lines += [
