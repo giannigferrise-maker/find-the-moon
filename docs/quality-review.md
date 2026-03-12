@@ -436,3 +436,46 @@ This PR implements constellation art (Orion, Cassiopeia, Big Dipper) for the nig
 - LOW: FTM-SC-004 tests require live CDN network access in CI
 - LOW: Constellation-absence test uses CSS class check rather than label string
 - INFO: FTM-FR-012 compass-direction end-to-end test coverage reduced in prior PR
+
+
+## Quality Review — Issue #47 (Duplicate FTM-FR-033 test blocks consolidation)
+
+**Date:** 2026-03-14  
+**Reviewer:** Quality Engineering  
+**Standard:** ISO 62304-inspired SDLC (non-medical adaptation)  
+**Verdict:** FAIL — Issues must be resolved before merge
+
+### Change Summary
+
+Consolidate three duplicate Playwright `test.describe` blocks for FTM-FR-033 (animated clouds in daytime theme) into a single canonical block. No application code, SRS requirements, or other test files are modified.
+
+### Findings Summary
+
+| Severity | Activity | Title |
+|---|---|---|
+| PASS | Requirements Quality §5.2 | No new requirements introduced |
+| WARNING | Requirements Quality §5.2 | FTM-FR-033 SRS text does not specify sage green color #a8d5a2 |
+| PASS | Code Quality §5.5 | Change is minimal and focused on test consolidation |
+| **FAIL** | Code Quality §5.5 | Canonical FTM-FR-033 test block absent from diff — net result may be zero coverage |
+| WARNING | Code Quality §5.5 | Security review references files not present in diff; reviewer is AI model |
+| **FAIL** | Test Coverage §5.6 | Post-consolidation FTM-FR-033 test coverage cannot be confirmed |
+| WARNING | Test Coverage §5.6 | Night-theme negative assertion must be confirmed in canonical block |
+| PASS | Test Coverage §5.6 | No orphaned tests introduced |
+| **FAIL** | Traceability §5.7 | VTM Test Suite name for FTM-FR-033 will be stale if canonical block has different describe() name |
+| WARNING | Traceability §5.7 | VTM Notes do not reflect all four required coverage points |
+| WARNING | Process Compliance | Security reviewer listed as AI model, not human engineer |
+| PASS | Process Compliance | Security review documented for Issue #47 |
+| WARNING | Process Compliance | CI scripting changes referenced in security review not visible in diff |
+
+### Required Actions Before Merge
+
+1. **[FAIL — Code/Test]** Provide the canonical FTM-FR-033 `test.describe` block in the diff. The four required coverage points must be present: (a) cloud layer DOM presence in day theme, (b) sage green fill color #a8d5a2, (c) cloud animation active, (d) clouds absent in night theme.
+2. **[FAIL — Traceability]** Update the VTM entry for FTM-FR-033: correct the Test Suite name to match the canonical block's exact `describe()` string, and update Notes to enumerate all active test cases.
+3. **[FAIL — Test Coverage]** Confirm the night-theme negative assertion (clouds absent / cloudCount === 0 at night) is present in the canonical block.
+
+### Recommended Actions (Non-Blocking)
+
+4. **[WARNING — Requirements]** Consider adding a sub-requirement to FTM-FR-033 (or a new FTM-FR-033a) to formally specify the sage green color constraint #a8d5a2, providing a traceable basis for the color assertion in the test.
+5. **[WARNING — Process]** Replace AI model name with a human reviewer name in the security review entry, or add a human sign-off line.
+6. **[WARNING — Process]** Clarify whether `.github/scripts/sdlc_session3.py` and `.github/scripts/sdlc_session5.py` were modified; if so, include them in the diff for review.
+7. **[WARNING — Traceability]** Update VTM Notes for FTM-FR-033 to enumerate all four coverage points once canonical block is confirmed.

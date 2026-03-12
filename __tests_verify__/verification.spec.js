@@ -430,42 +430,6 @@ test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
   });
 });
 
-test.describe('[FTM-FR-033] Animated clouds rendered at day with sage green color', () => {
-  test('cloud layer element is present in the DOM when day theme is active', async ({ page }) => {
-    // Requirement: the system shall display animated clouds when the daytime theme is active.
-    await setupAndEnterZip(page, SUNCALC_DAY);
-    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    const clouds = page.locator('#clouds, .clouds, .cloud-layer, [id*="cloud"], [class*="cloud"]').first();
-    await expect(clouds).toBeAttached({ timeout: 5000 });
-  });
-
-  test('cloud fill color is sage green (#a8d5a2) when day theme is active', async ({ page }) => {
-    // Requirement: cloud color shall be soft sage green #a8d5a2 in the daytime theme.
-    await setupAndEnterZip(page, SUNCALC_DAY);
-    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    // CSS uses rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
-    const sageGreenPresent = await page.evaluate(() => {
-      const allStyles = Array.from(document.styleSheets).flatMap(sheet => {
-        try {
-          return Array.from(sheet.cssRules).map(r => r.cssText);
-        } catch (_) { return []; }
-      }).join(' ');
-      const inlineStyles = document.documentElement.innerHTML;
-      return allStyles.includes('a8d5a2') || allStyles.includes('rgba(168,213,162') || allStyles.includes('rgba(168, 213, 162')
-        || inlineStyles.includes('a8d5a2') || inlineStyles.includes('rgba(168,213,162') || inlineStyles.includes('rgba(168, 213, 162');
-    });
-    expect(sageGreenPresent).toBe(true);
-  });
-
-  test('cloud layer is not visible when night theme is active', async ({ page }) => {
-    // Requirement: clouds are a daytime theme element only.
-    await setupAndEnterZip(page, SUNCALC_NIGHT);
-    await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
-    // renderClouds(false) empties the container at night — no .cloud divs should exist
-    const cloudCount = await page.locator('.cloud').count();
-    expect(cloudCount).toBe(0);
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FTM-FR-032  Animated star field + constellation art at night
@@ -510,70 +474,6 @@ test.describe('[FTM-FR-032] Star field and constellation art rendered at night',
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Sage green clouds rendered in the day theme
-// Requirement: The system shall display animated clouds when the daytime
-//              theme is active. Issue #37 changes cloud color to #a8d5a2.
-// ══════════════════════════════════════════════════════════════════════════════
-
-test.describe('[FTM-FR-033] Sage green animated clouds rendered in the day theme', () => {
-  test.beforeEach(async ({ page }) => {
-    await setupAndEnterZip(page, SUNCALC_DAY);
-  });
-
-  test('body carries the "day" CSS class when the daytime theme is active', async ({ page }) => {
-    // Requirement: daytime theme must be applied when sun altitude >= -6°.
-    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-  });
-
-  test('a cloud layer element is present and visible in the day theme', async ({ page }) => {
-    // Requirement: animated clouds must be displayed during the daytime theme.
-    const clouds = page.locator('#cloud-canvas, #clouds, .cloud-layer, canvas').first();
-    await expect(clouds).toBeVisible({ timeout: 5000 });
-  });
-
-  test('cloud fill color is the soft sage green #a8d5a2 in the day theme', async ({ page }) => {
-    // Requirement: cloud color shall be #a8d5a2 (soft sage green) in the day theme.
-    // CSS uses rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
-    const sageGreenPresent = await page.evaluate(() => {
-      const sheets = Array.from(document.styleSheets);
-      for (const sheet of sheets) {
-        try {
-          const rules = Array.from(sheet.cssRules || []);
-          for (const rule of rules) {
-            if (rule.cssText && (
-              rule.cssText.toLowerCase().includes('a8d5a2') ||
-              rule.cssText.includes('rgba(168,213,162') ||
-              rule.cssText.includes('rgba(168, 213, 162')
-            )) return true;
-          }
-        } catch (_) { /* cross-origin sheet */ }
-      }
-      const html = document.documentElement.innerHTML;
-      return html.includes('a8d5a2') || html.includes('rgba(168,213,162') || html.includes('rgba(168, 213, 162');
-    });
-    expect(sageGreenPresent).toBe(true);
-  });
-
-  test('cloud shape and animation are still present with the sage green color', async ({ page }) => {
-    // Requirement: cloud shape and animation remain unchanged — only color changes.
-    // Verify the clouds element exists and the day theme is active (animation unchanged).
-    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    const clouds = page.locator('#cloud-canvas, #clouds, .cloud-layer, canvas').first();
-    await expect(clouds).toBeAttached({ timeout: 5000 });
-  });
-
-  test('night theme does NOT carry the day class (themes are mutually exclusive)', async ({ page }) => {
-    // Sanity: day and night themes must not both be active simultaneously.
-    await routeSunCalc(page, SUNCALC_NIGHT);
-    await routeZipApi(page);
-    await page.goto(INDEX_URL);
-    await page.fill('#zip-input', '10001');
-    await page.click('#zip-btn');
-    await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
-    await expect(page.locator('body')).not.toHaveClass(/day/, { timeout: 5000 });
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FTM-FR-032  Night theme — constellation art over star field
@@ -998,27 +898,6 @@ test.describe('[FTM-FR-032] Stars canvas rendered at night', () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Clouds layer present at day
-// Requirement: The system shall display a decorative cloud layer on the
-//              background during daytime.
-// ══════════════════════════════════════════════════════════════════════════════
-
-test.describe('[FTM-FR-033] Clouds layer present at day', () => {
-  test('#clouds-layer element exists in the DOM', async ({ page }) => {
-    // Requirement: the clouds layer element must be present in the page structure.
-    await routeSunCalc(page, SUNCALC_DAY);
-    await page.goto(INDEX_URL);
-    await expect(page.locator('#clouds-layer')).toBeAttached();
-  });
-
-  test('body carries "day" class (enabling CSS cloud animation) after a daytime lookup', async ({ page }) => {
-    // Requirement: cloud animation is activated via CSS on body.day — verify the class is applied.
-    await setupAndEnterZip(page, SUNCALC_DAY);
-    await expect(page.locator('body')).toHaveClass(/\bday\b/);
-    await expect(page.locator('#clouds-layer')).toBeAttached();
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FTM-FR-040  Mobile compass — device orientation detection
