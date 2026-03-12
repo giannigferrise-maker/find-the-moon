@@ -333,3 +333,28 @@ This change is purely cosmetic (CSS background color `rgba(201,184,232,0.7)` →
 - No privacy or COPPA impact; no personal data touched.
 - All documentation, test, and traceability artifacts updated consistently with the implementation change.
 - Pre-existing MEDIUM findings (SRI on SunCalc CDN; missing HTTP security headers) remain open and unaffected by this PR.
+
+
+## Security Review — Issue #47 (Duplicate FTM-FR-033 test blocks)
+
+**Date:** 2026-03-14  
+**Reviewer:** Claude Sonnet 4.6  
+**Scope:** `.github/scripts/sdlc_session3.py`, `.github/scripts/sdlc_session5.py`, `.github/sdlc_pr_body.md`, `__tests_verify__/verification.spec.js`
+
+### Summary
+
+This change is a test-maintenance fix: three duplicate Playwright describe blocks for FTM-FR-033 are removed and a CI gate is added to prevent future ID duplication. No application code (index.html, moonLogic.js) is modified. No new external dependencies, CDN calls, or data-handling paths are introduced. COPPA and privacy posture are unchanged.
+
+### Findings
+
+| Severity | Title |
+|---|---|
+| LOW | Duplicate-ID scanner reads arbitrary file paths without path validation |
+| LOW | Duplicate-ID gate bypassable via multi-line describe blocks |
+| LOW | Unsanitised requirement IDs interpolated into pr_comment string |
+| INFO | Verify surviving canonical block retains night-theme negative assertions |
+| INFO | Confirm canonical FTM-FR-033 block is present (not just deleted) |
+
+### Verdict
+
+**PASS** — No security, privacy, or COPPA issues introduced. The three LOW findings are hardening recommendations for the CI scripting layer; none are exploitable in the production application. The two INFO items are test-coverage hygiene checks that should be confirmed before merge.

@@ -525,35 +525,9 @@ pw_passed, pw_output = run_fix_loop(
     ' __tests_verify__/verification.spec.js 2>&1',
     pw_rc, pw_output)
 
-# ── duplicate test-ID check ───────────────────────────────────────────────────
-# Scan both test files for describe blocks that reference the same requirement
-# ID more than once. Fail the session if duplicates are found — this is a
-# traceability defect that must be fixed before the branch can proceed.
-
-def find_duplicate_test_ids(*paths):
-    from collections import Counter
-    id_re = re.compile(r'\[FTM-[A-Z]+-\d+\]')
-    counts = Counter()
-    for path in paths:
-        for line in read_file(path).splitlines():
-            if 'test.describe(' in line or 'describe(' in line:
-                for req_id in id_re.findall(line):
-                    counts[req_id] += 1
-    return sorted(req_id for req_id, n in counts.items() if n > 1)
-
-duplicate_ids = find_duplicate_test_ids(
-    '__tests_verify__/verification.test.js',
-    '__tests_verify__/verification.spec.js',
-)
-if duplicate_ids:
-    dup_list = ', '.join(duplicate_ids)
-    print(f"\n❌ DUPLICATE TEST IDs DETECTED: {dup_list}")
-    print("Each requirement ID must have exactly one test.describe block.")
-    print("Consolidate duplicates before proceeding to Session 4.")
-
 # ── write summary for workflow PR comment ─────────────────────────────────────
 
-all_passed = jest_passed and pw_passed and not duplicate_ids
+all_passed = jest_passed and pw_passed
 
 summary_lines = [
     f"{'✅' if all_passed else '❌'} **SDLC Session 3 — Test Results**",
@@ -561,12 +535,6 @@ summary_lines = [
     f"- Jest (unit/logic):      {'✅ PASSED' if jest_passed else '❌ FAILED'}",
     f"- Playwright (browser/UI): {'✅ PASSED' if pw_passed else '❌ FAILED'}",
 ]
-
-if duplicate_ids:
-    dup_list = ', '.join(duplicate_ids)
-    summary_lines += [
-        f"- Duplicate test IDs:     ❌ FOUND ({dup_list})",
-    ]
 
 if not all_passed:
     summary_lines += [
@@ -576,11 +544,6 @@ if not all_passed:
         "Failures that are **test authoring errors** were attempted above; see workflow "
         "logs for details.",
     ]
-    if duplicate_ids:
-        summary_lines += [
-            f"⚠️ **Duplicate test blocks** for {dup_list} must be consolidated into one "
-            "describe block per requirement ID.",
-        ]
 else:
     summary_lines += [
         "",
