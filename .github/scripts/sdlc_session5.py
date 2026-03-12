@@ -252,6 +252,44 @@ message = client.messages.create(
 response_text = message.content[0].text
 data = extract_json(response_text, message)
 
+# ── deterministic duplicate test-ID check ────────────────────────────────────
+# Count how many test.describe blocks reference each requirement ID across both
+# test files. If any ID appears more than once, inject a WARNING finding.
+# This is code-level enforcement — not model-dependent.
+
+def find_duplicate_test_ids(*paths):
+    from collections import Counter
+    id_re = re.compile(r'\[FTM-[A-Z]+-\d+\]')
+    counts = Counter()
+    for path in paths:
+        for line in read_file(path).splitlines():
+            if 'test.describe(' in line or ('describe(' in line and 'test.describe(' not in line):
+                for req_id in id_re.findall(line):
+                    counts[req_id] += 1
+    return sorted(req_id for req_id, n in counts.items() if n > 1)
+
+duplicate_ids = find_duplicate_test_ids(
+    '__tests_verify__/verification.test.js',
+    '__tests_verify__/verification.spec.js',
+)
+if duplicate_ids:
+    dup_list = ', '.join(duplicate_ids)
+    print(f"WARNING: Duplicate test describe blocks detected: {dup_list}")
+    data.setdefault('findings', []).insert(0, {
+        'activity': 'Test Coverage',
+        'severity': 'WARNING',
+        'title': f'Duplicate test describe blocks: {dup_list}',
+        'description': (
+            f'The following requirement IDs have more than one test.describe block: {dup_list}. '
+            'Consolidate into a single canonical block to reduce maintenance overhead and '
+            'avoid misleading duplicate entries in test output.'
+        ),
+    })
+    data['pr_comment'] = (
+        f'⚠️ **W-DUP**: Duplicate test blocks for {dup_list} — consolidate into one describe block.\n\n'
+        + data.get('pr_comment', '')
+    )
+
 # ── write quality doc entry ───────────────────────────────────────────────────
 
 if data.get('quality_doc_entry', '').strip():
