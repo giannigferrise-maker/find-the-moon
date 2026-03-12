@@ -46,6 +46,8 @@ def read_file(path, max_chars=None):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
+        if max_chars and len(content) > max_chars:
+            print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Consider raising the limit.")
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
@@ -107,8 +109,8 @@ token        = os.environ.get('GH_TOKEN', '')
 repo         = os.environ.get('REPO', '')
 
 diff_content          = read_file('/tmp/branch.diff', max_chars=20000)
-srs_content           = read_file('FTM-SRS-001.md', max_chars=6000)
-existing_security_doc = read_file('docs/security-review.md', max_chars=4000)
+srs_content           = read_file('FTM-SRS-001.md', max_chars=20000)
+existing_security_doc = read_file('docs/security-review.md', max_chars=20000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 

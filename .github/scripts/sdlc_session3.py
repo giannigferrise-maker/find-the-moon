@@ -77,6 +77,8 @@ def read_file(path, max_chars=None):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
+        if max_chars and len(content) > max_chars:
+            print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Consider raising the limit.")
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
@@ -189,7 +191,7 @@ issue_number = os.environ['ISSUE_NUMBER']
 issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
-srs_content       = read_file('FTM-SRS-001.md', max_chars=10000)
+srs_content       = read_file('FTM-SRS-001.md', max_chars=20000)
 test_guide        = read_file('FTM-TEST-GUIDE.md', max_chars=8000)
 jest_tests        = read_file('__tests_verify__/verification.test.js', max_chars=30000)
 # For the Playwright spec (103KB+) send only header + TODO-containing describe blocks
@@ -321,7 +323,7 @@ for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
     jest_after     = read_file('__tests_verify__/verification.test.js', max_chars=30000)
-    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=20000)
+    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=30000)
 
     critique_prompt = f"""You are a senior test engineer reviewing freshly generated test code \
 for the "Find the Moon" web application.
