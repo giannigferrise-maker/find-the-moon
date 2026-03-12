@@ -48,26 +48,22 @@ jobs:
                   __tests_verify__/verification.test.js \
                   __tests_verify__/verification.spec.js
           if git diff --cached --quiet; then
-            echo "No changes to commit."
+            echo "No document changes — pushing branch with no new commits so subsequent sessions can check it out."
           else
             git commit -m "SDLC Session 1: requirements and test stubs for issue #${{ github.event.issue.number }}"
-            git push origin "$BRANCH"
           fi
+          git push origin "$BRANCH"
 
       - name: Open draft PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if git ls-remote --exit-code origin "$BRANCH" > /dev/null 2>&1; then
-            gh pr create \
-              --title "SDLC issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
-              --body "$(cat .github/sdlc_pr_body.md)" \
-              --base main \
-              --head "$BRANCH" \
-              --draft
-          else
-            echo "No changes were pushed — skipping PR creation."
-          fi
+          gh pr create \
+            --title "SDLC issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
+            --body "$(cat .github/sdlc_pr_body.md)" \
+            --base main \
+            --head "$BRANCH" \
+            --draft
 
       - name: Notify issue — Session 1 complete
         env:
