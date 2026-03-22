@@ -56,11 +56,12 @@ jobs:
       - name: Commit and push
         run: |
           git add __tests_verify__/verification.test.js \
-                  __tests_verify__/verification.spec.js
+                  __tests_verify__/verification.spec.js \
+                  traceability-matrix.txt
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "SDLC Session 3: automated tests for issue #${{ github.event.issue.number }}"
+            git commit -m "SDLC Session 3: verification tests and VTM for issue #${{ github.event.issue.number }}"
             git push origin sdlc/issue-${{ github.event.issue.number }}
           fi
 

@@ -7,13 +7,13 @@ The Find the Moon project uses a 5-session automated SDLC pipeline built on GitH
 ```
 GitHub Issue
     │
-    ├─ label: 1-reqs-ready  ──▶  Session 1: Requirements & Tests
+    ├─ label: 1-reqs-ready  ──▶  Session 1: Requirements Engineering
     │                                 └─ creates branch, opens draft PR
     │
     ├─ label: 2-code-ready  ──▶  Session 2: Code Implementation
     │
-    ├─ label: 3-tests-ready ──▶  Session 3: Automated Tests
-    │                                 └─ runs Jest + Playwright
+    ├─ label: 3-tests-ready ──▶  Session 3: Verification Engineering
+    │                                 └─ writes tests + VTM, runs Jest + Playwright
     │
     ├─ label: 4-security-ready ▶  Session 4: Security Review
     │
@@ -25,37 +25,28 @@ Human engineers apply each label after reviewing the previous session's output. 
 
 ---
 
-## Session 1 — Requirements & Tests
+## Session 1 — Requirements Engineering
 
 **Trigger label:** `1-reqs-ready`
 **Script:** `.github/scripts/sdlc_session1.py`
 
 **Reads:**
 - GitHub issue title and body (from environment variables)
-- `FTM-SRS-001.md` (first 10,000 chars)
-- `traceability-matrix.txt` (first 6,000 chars)
-- `__tests_verify__/verification.test.js` (first 3,000 chars, for style reference)
-- `__tests_verify__/verification.spec.js` (first 3,000 chars, for style reference)
+- `FTM-SRS-001.md` (up to 20,000 chars)
 
 **Claude's tasks:**
 1. Decide whether the issue requires new requirements or updates to existing ones
-2. Draft traceability matrix entries for any newly added requirements
-3. Write TODO test stubs for any newly added requirements not already covered
-4. Write a 2–3 sentence PR summary
+2. Write a 2–3 sentence PR summary
 
 **Writes:**
 - `FTM-SRS-001.md` — appends new requirements or updates existing values in-place
-- `traceability-matrix.txt` — appends new traceability entries
-- `__tests_verify__/verification.test.js` — appends Jest TODO stubs
-- `__tests_verify__/verification.spec.js` — appends Playwright TODO stubs
-- `.github/sdlc_session1_delta.md` — the exact requirements added/changed this session; read by Session 2 as its primary implementation target
+- `.github/sdlc_session1_delta.md` — the exact requirements added/changed this session; read by Sessions 2 and 3 as the primary implementation/verification target
 - `.github/sdlc_pr_body.md` — PR description used when opening the draft PR
 
 **Guardrails (code-level, not prompt-only):**
-- `extract_covered_req_ids()` — greps both test files for existing `[FTM-XX-NNN]` describe blocks and builds an `already_covered` set before calling Claude
-- `strip_covered_stubs()` — removes any describe blocks for already-covered IDs from Claude's output, regardless of prompt instructions
-- `strip_covered_traceability()` — removes traceability entries for already-covered IDs from Claude's output
-- Self-critique loop (up to 2 rounds) — Claude reviews only the newly added content for defects; pre-existing content is not passed to the self-critique
+- Self-critique loop (up to 2 rounds) — Claude reviews only the newly added SRS content for defects (duplicate IDs, wrong verification method, non-testable requirements, semantic conflicts)
+
+**Design principle:** Session 1 is a pure requirements engineer. It writes ONLY requirements and the delta file. Verification (tests, VTM) is owned entirely by Session 3.
 
 **Workflow actions:**
 - Creates branch `sdlc/issue-N`
@@ -98,20 +89,24 @@ Human engineers apply each label after reviewing the previous session's output. 
 
 ---
 
-## Session 3 — Automated Tests
+## Session 3 — Verification Engineering
 
 **Trigger label:** `3-tests-ready`
 **Script:** `.github/scripts/sdlc_session3.py`
 
 **Reads:**
 - GitHub issue title and body
-- `FTM-SRS-001.md`
+- `.github/sdlc_session1_delta.md` — primary verification target; the exact requirements added/changed by Session 1
+- `FTM-SRS-001.md` (up to 20,000 chars) — full SRS for broader context
 - `FTM-TEST-GUIDE.md` — element IDs, DOM facts, mock patterns, known pitfalls
 - `__tests_verify__/verification.test.js` (full file, up to 30,000 chars)
-- `__tests_verify__/verification.spec.js` — **only the header + TODO-containing describe blocks** (via `extract_todo_blocks()`, up to 25,000 chars)
+- `__tests_verify__/verification.spec.js` (full file, up to 30,000 chars)
+- `traceability-matrix.txt` (up to 40,000 chars) — to understand existing VTM coverage
 
 **Claude's tasks:**
-- Replace each TODO stub with real, working test assertions
+- Independently decide what tests are needed for the requirements in the Session 1 delta
+- Write complete, working test assertions (not stubs) for uncovered requirements
+- Write VTM entries for each requirement tested
 - Write tests against requirements, not implementation details (adversarial mindset)
 - Use correct element IDs and selectors from the Test Guide
 
@@ -122,21 +117,24 @@ Human engineers apply each label after reviewing the previous session's output. 
 - The session does not pass until both suites are green and no coverage/duplicate issues exist
 
 **Writes:**
-- `__tests_verify__/verification.test.js`
-- `__tests_verify__/verification.spec.js`
+- `__tests_verify__/verification.test.js` — appends new test blocks
+- `__tests_verify__/verification.spec.js` — appends new test blocks
+- `traceability-matrix.txt` — appends VTM entries for new requirements
 - `session3-summary.md` — posted as PR comment
 - `session3-status.json` — read by the workflow to fail the job if tests didn't pass
 
 **Guardrails (code-level):**
-- `apply_replacement()` TODO guard — rejects any replacement where `old_string` does not contain `TODO`; Session 3 can only fill stubs, never modify existing passing tests
+- `strip_covered_tests()` — removes test blocks for requirement IDs that already have coverage, regardless of prompt instructions; prevents duplicate test blocks
 - Corruption pattern stripper — removes known LLM output corruptions (e.g. `});pyOn(` fragments)
 - Self-critique loop (up to 2 rounds) — checks for syntax errors, wrong framework usage, and test robustness
 - Test execution — runs Jest and Playwright after writing; if either fails, a fix loop (up to 2 rounds) asks Claude to diagnose and fix test *authoring* errors only, never app bugs
 - **Duplicate test ID check** — scans both test files for describe blocks sharing the same requirement ID; fails the session if duplicates are found
 - **Missing test coverage check** — compares all Test-method requirements in the SRS against describe blocks in the test files; fails the session if any requirement has no coverage
 
+**Design principle:** Session 3 is the sole owner of all verification artifacts. It independently decides what tests are needed — there are no stubs from Session 1 to fill. This means Session 3 acts as a true second engineer who reads the requirements and decides how to verify them.
+
 **Workflow actions:**
-- Commits updated test files
+- Commits updated test files and VTM
 - Posts `session3-summary.md` as a PR comment (always, even on failure)
 - Fails the workflow job if `session3-status.json` reports `all_passed: false`
 
@@ -196,13 +194,13 @@ Each session is responsible for a specific set of files. Modifying files outside
 | File | Owner |
 |---|---|
 | `FTM-SRS-001.md` | Session 1 |
-| `traceability-matrix.txt` | Session 1 |
-| `.github/sdlc_session1_delta.md` | Session 1 (writes), Session 2 (reads) |
-| `__tests_verify__/verification.test.js` | Session 1 (stubs), Session 3 (implementation) |
-| `__tests_verify__/verification.spec.js` | Session 1 (stubs), Session 3 (implementation) |
+| `.github/sdlc_session1_delta.md` | Session 1 (writes), Sessions 2 + 3 (read) |
 | `src/index.html` | Session 2 |
 | `src/moonLogic.js` | Session 2 |
 | `__tests__/` | Session 2 |
+| `traceability-matrix.txt` | Session 3 |
+| `__tests_verify__/verification.test.js` | Session 3 |
+| `__tests_verify__/verification.spec.js` | Session 3 |
 | `docs/security-review.md` | Session 4 |
 | `docs/quality-review.md` | Session 5 |
 
@@ -221,7 +219,7 @@ Each session is responsible for a specific set of files. Modifying files outside
 ## Model and Infrastructure
 
 - **Model:** `claude-sonnet-4-6` across all sessions
-- **Max tokens:** 16,000 for Sessions 1, 3, 5; 8,192 for critique/fix loops
+- **Max tokens:** 16,000 for Sessions 3, 5; 8,192 for Sessions 1, 2, 4 and all critique/fix loops
 - **Runtime:** GitHub Actions, `ubuntu-latest`, Python 3.12
 - **API:** Anthropic API (pay-per-token, separate from Claude.ai/Claude Code subscriptions)
 - **Typical cost:** ~8–11 API calls per complete pipeline run; well under $0.50 per issue at Sonnet pricing
