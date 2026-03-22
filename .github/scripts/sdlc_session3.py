@@ -181,14 +181,9 @@ a browser-based tool showing users where the moon is, intended for general publi
 including children.
 
 A GitHub issue has been through requirements (Session 1) and code implementation (Session 2). \
-Your job is to write complete, working verification tests for the requirements that were \
-added or changed in this issue, and to write the corresponding Verification Traceability \
-Matrix (VTM) entries.
+The Session 1 delta below is your authoritative specification — not the original issue body.
 
-Issue #{issue_number}: {issue_title}
-{issue_body}
-
---- Session 1 Requirements Delta (primary verification target) ---
+--- Session 1 Requirements Delta (your specification) ---
 {srs_delta}
 
 --- Full SRS for broader context ---
@@ -206,53 +201,56 @@ Issue #{issue_number}: {issue_title}
 --- Current traceability-matrix.txt (VTM) ---
 {traceability_content}
 
---- Requirement IDs that already have test coverage (do NOT add tests for these) ---
-{', '.join(already_covered) if already_covered else '(none — all requirements in the delta need tests)'}
+--- Requirement IDs that already have test coverage ---
+{', '.join(already_covered) if already_covered else '(none)'}
 
-Your tasks:
-1. Identify which requirements from the Session 1 delta need new test coverage (exclude \
-   already-covered IDs listed above).
-2. For each requirement needing coverage, decide the appropriate test type:
-   - Logic/calculation requirements → Jest (pure JS, no browser)
-   - UI/DOM/visual requirements → Playwright (browser)
-   - Some requirements may need both
-3. Write complete, working test assertions (not stubs). Each new test block must:
-   - Use a describe block named: "Requirement ID description [FTM-XX-NNN]"
-   - Be placed in the correct file (Jest or Playwright)
-   - Follow the exact style, indentation, and mock patterns of the existing tests in that file
-4. Write VTM entries for each requirement you write tests for.
-   - Format must match the existing VTM style exactly
-   - Test Suite name must exactly match the describe block name you wrote
-   - Test File must reference the correct file path
-5. For requirements in the delta that have Method = Inspection (not Test), do NOT write \
-   tests — these are verified by human review, not automation.
+HOW TO READ THE DELTA — four sections, four actions:
+
+1. "New requirements" → Write NEW test blocks for these. Each uncovered Test-method requirement \
+   gets a new describe block. Do NOT write tests for Inspection-method requirements.
+
+2. "Updated requirements in-place" → These requirement IDs ARE in the already-covered list above. \
+   Do NOT write new test blocks for them. Instead, return string replacements in `test_updates` \
+   that update the expected values in the EXISTING test blocks to match the new values in the delta.
+
+3. "Violated requirements — defect fix" → These requirements already have tests. The code was \
+   just fixed to comply. Do NOT modify those tests — they should now pass as-is. Return nothing \
+   for these in any field.
+
+4. "Implementation note — no formal requirement" → No test action needed. Return nothing.
 
 MINDSET — think like an adversary, not a confirmer:
 - Your goal is NOT to write tests that pass against the current implementation. Your goal is
   to write tests that would FAIL if the requirement was violated or the feature was removed.
-- For every test you write, ask yourself: "If a developer deleted the code implementing this
-  requirement tomorrow, would my test catch it?" If the answer is no, the test provides no value.
-- You have intentionally not seen the implementation — write tests from the requirement alone.
-  Do not assume anything about how the feature is built; test the observable behavior.
+- Write tests from the requirement alone — you have not seen the implementation.
 
 CORRECTNESS:
 - Use the Test Guide for correct element IDs, selectors, color formats, and known pitfalls
 - Tests must be deterministic — no real network calls, no real GPS, no real time
 - Jest tests: use pure JS logic, no browser, mock external dependencies
 - Playwright tests: use page mocks for SunCalc and network calls (follow existing mock patterns)
-- Do not modify any existing passing tests
 - Do not add new imports or dependencies not already in the file
+- For test_updates: return the minimum replacement needed to update the expected value — \
+  do not rewrite the whole test block
 
 Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
 {{
-  "jest_tests": "complete Jest test code to append to verification.test.js, or empty string",
-  "playwright_tests": "complete Playwright test code to append to verification.spec.js, or empty string",
-  "traceability_entries": "VTM entries to append to traceability-matrix.txt, or empty string",
-  "summary": "1-2 sentence description of what tests were written"
+  "jest_tests": "complete Jest test code to append for NEW requirements, or empty string",
+  "playwright_tests": "complete Playwright test code to append for NEW requirements, or empty string",
+  "traceability_entries": "VTM entries for NEW requirements only, or empty string",
+  "test_updates": [
+    {{
+      "file": "__tests_verify__/verification.test.js or __tests_verify__/verification.spec.js",
+      "old_string": "exact verbatim text currently in the file",
+      "new_string": "replacement with updated expected value",
+      "req_id": "FTM-XX-NNN",
+      "reason": "brief explanation e.g. updated expected color from sage green to lavender"
+    }}
+  ],
+  "summary": "1-2 sentence description of what verification changes were made"
 }}
 
-If there are no requirements in the delta that need new test coverage, return empty strings
-for jest_tests, playwright_tests, and traceability_entries.
+If nothing applies, return empty strings and an empty test_updates array.
 """
 
 # ── call Claude ───────────────────────────────────────────────────────────────
@@ -268,27 +266,56 @@ message = client.messages.create(
 response_text = message.content[0].text
 data = extract_json(response_text, message)
 
-# ── apply test additions (with coverage guardrail) ────────────────────────────
+# ── apply test additions for NEW requirements (with coverage guardrail) ───────
 
 jest_code = strip_covered_tests(data.get('jest_tests', ''), already_covered)
 if jest_code.strip():
     append_to_file('__tests_verify__/verification.test.js', jest_code)
-    print("Updated verification.test.js")
+    print("Updated verification.test.js (new test blocks)")
 else:
-    print("No new Jest tests to add.")
+    print("No new Jest test blocks to add.")
 
 pw_code = strip_covered_tests(data.get('playwright_tests', ''), already_covered)
 if pw_code.strip():
     append_to_file('__tests_verify__/verification.spec.js', pw_code)
-    print("Updated verification.spec.js")
+    print("Updated verification.spec.js (new test blocks)")
 else:
-    print("No new Playwright tests to add.")
+    print("No new Playwright test blocks to add.")
 
 if data.get('traceability_entries', '').strip():
     append_to_file('traceability-matrix.txt', data['traceability_entries'])
     print("Updated traceability-matrix.txt")
 else:
     print("No new VTM entries to add.")
+
+# ── apply test_updates for CHANGED requirements ───────────────────────────────
+# When an existing requirement was updated in-place (Enhancement-A2 or A3),
+# the existing test expected values are now stale. Apply targeted replacements
+# to update them before running the test suite.
+# Note: strip_covered_tests() is NOT applied here — these are deliberate value
+# updates to existing test blocks, not new duplicate blocks.
+
+test_updates = data.get('test_updates', [])
+if test_updates:
+    applied_updates_count = 0
+    for upd in test_updates:
+        file_path  = upd.get('file', '')
+        old_string = upd.get('old_string', '')
+        new_string = upd.get('new_string', '')
+        req_id     = upd.get('req_id', '')
+        reason     = upd.get('reason', '')
+        if not file_path or not old_string:
+            print(f"WARNING: Skipped test_update for {req_id} — missing file or old_string")
+            continue
+        try:
+            apply_fix_replacement(file_path, old_string, new_string)
+            print(f"Updated expected value in {file_path} for {req_id}: {reason}")
+            applied_updates_count += 1
+        except (ValueError, FileNotFoundError) as e:
+            print(f"WARNING: Skipped test_update for {req_id} — {e}")
+    print(f"Applied {applied_updates_count}/{len(test_updates)} test_update(s).")
+else:
+    print("No existing test expected values to update.")
 
 print(data.get('summary', 'Done.'))
 
@@ -425,15 +452,23 @@ Return ONLY valid JSON — no markdown fences, no preamble.
 
 MAX_TEST_FIX_ROUNDS = 2
 
-FIX_RULES = """STRICT RULES — read carefully before proposing any fix:
+FIX_RULES = f"""STRICT RULES — read carefully before proposing any fix:
 - Fix ONLY test authoring mistakes: wrong element IDs or selectors, missing await,
   wrong mock pattern, incorrect value format (e.g. browser returns 'rgb(168, 213, 162)'
   but test expects '#a8d5a2'), missing page.goto(), timeout too short, syntax error.
 - NEVER change what a test is asserting to match broken app behavior.
 - NEVER weaken an assertion (e.g. loosening a regex, removing an expect call).
-- NEVER change an expected value just because the app currently returns something different.
-- If a failure shows the APP is not meeting a requirement, record it in "app_bugs" and
-  leave "fixes" empty for that failure. The app must be fixed in Session 2, not here."""
+- STALE TEST EXCEPTION: if a failure involves an expected value that matches an OLD value
+  in the "Updated requirements in-place" section of the delta below, this is a stale test
+  (the requirement changed and the test was not fully updated). Fix it by updating the
+  expected value to the NEW value from the delta. This is not weakening an assertion —
+  it is correcting a stale one.
+- For all other value mismatches: if the test expects X but the app returns Y and there is
+  no delta entry explaining the change, record it in "app_bugs" — the app must be fixed
+  in Session 2, not here.
+
+--- Session 1 delta (use this to identify stale tests vs app bugs) ---
+{srs_delta}"""
 
 def run_fix_loop(suite_label, test_file, run_cmd, rc, output):
     passed = rc == 0

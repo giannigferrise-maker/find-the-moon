@@ -92,25 +92,35 @@ prompt = f"""You are a senior JavaScript developer implementing a change for the
 web application — a single-page browser app (index.html + src/moonLogic.js) that shows users \
 where the moon is. It is intended for general public use including children.
 
-A GitHub issue is ready for code implementation:
+The requirements engineer (Session 1) has analysed issue #{issue_number} and produced the \
+following delta. THIS DELTA IS YOUR AUTHORITATIVE SPECIFICATION — implement exactly what it \
+says, not what the original issue body says. The issue body is context only.
 
+--- Session 1 Requirements Delta (your specification — implement this) ---
+{srs_delta}
+
+--- Full SRS (for broader context on the complete requirement set) ---
+{srs_content}
+
+--- Original issue (context only — the delta above is what you implement) ---
 Issue #{issue_number}: {issue_title}
 {issue_body}
 
---- Requirements added/changed by Session 1 for THIS issue (implement these exactly) ---
-{srs_delta}
-
---- Full SRS (for context on the complete requirement set) ---
-{srs_content}
-
---- Current index.html (first 30 000 chars) ---
+--- Current index.html ---
 {index_html}
 
---- Current src/moonLogic.js (first 10 000 chars) ---
+--- Current src/moonLogic.js ---
 {moon_logic_js}
 
+How to read the delta:
+- "New requirements" → implement the new behavior described
+- "Updated requirements in-place" → update the code values to the New value column
+- "Violated requirements — defect fix" → fix the code so it complies with those requirements
+- "Implementation note — no formal requirement" → apply the described low-level fix
+- If the delta says "(none)" for all sections, no code changes are needed
+
 Your task:
-Implement the changes required by the issue. Follow these rules:
+Implement exactly what the delta specifies. Follow these rules:
 - Match the existing code style exactly (indentation, quotes, naming conventions)
 - Make the smallest change that fully satisfies the issue — do not refactor unrelated code
 - Do not add comments or docstrings to code you did not change
@@ -330,7 +340,8 @@ for the "Find the Moon" web application.
 
 The following code changes were just applied to the codebase for issue #{issue_number}: {issue_title}
 
-{issue_body}
+--- Session 1 Requirements Delta (what was implemented) ---
+{srs_delta}
 
 --- Code changes applied ---
 {replacements_for_prompt}
