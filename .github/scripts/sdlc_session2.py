@@ -115,9 +115,11 @@ Issue #{issue_number}: {issue_title}
 How to read the delta:
 - "New requirements" → implement the new behavior described
 - "Updated requirements in-place" → update the code values to the New value column
+- "Deleted requirements" → remove the code implementing those requirements
 - "Violated requirements — defect fix" → fix the code so it complies with those requirements
-- "Implementation note — no formal requirement" → apply the described low-level fix
+- "Implementation guidance — no formal requirement" → apply the described low-level fix
 - If the delta says "(none)" for all sections, no code changes are needed
+- If confidence is "low", the requirements engineer flagged assumptions — review them before implementing
 
 Your task:
 Implement exactly what the delta specifies. Follow these rules:

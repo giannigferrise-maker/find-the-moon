@@ -204,7 +204,7 @@ The Session 1 delta below is your authoritative specification — not the origin
 --- Requirement IDs that already have test coverage ---
 {', '.join(already_covered) if already_covered else '(none)'}
 
-HOW TO READ THE DELTA — four sections, four actions:
+HOW TO READ THE DELTA — five sections, five actions:
 
 1. "New requirements" → Write NEW test blocks for these. Each uncovered Test-method requirement \
    gets a new describe block. Do NOT write tests for Inspection-method requirements.
@@ -213,11 +213,15 @@ HOW TO READ THE DELTA — four sections, four actions:
    Do NOT write new test blocks for them. Instead, return string replacements in `test_updates` \
    that update the expected values in the EXISTING test blocks to match the new values in the delta.
 
-3. "Violated requirements — defect fix" → These requirements already have tests. The code was \
+3. "Deleted requirements" → Return string replacements in `test_updates` that REMOVE the \
+   existing test block for each deleted requirement ID. Replace the entire describe block \
+   with an empty string. Also note the deletion in `traceability_entries` as a removal.
+
+4. "Violated requirements — defect fix" → These requirements already have tests. The code was \
    just fixed to comply. Do NOT modify those tests — they should now pass as-is. Return nothing \
    for these in any field.
 
-4. "Implementation note — no formal requirement" → No test action needed. Return nothing.
+5. "Implementation guidance — no formal requirement" → No test action needed. Return nothing.
 
 MINDSET — think like an adversary, not a confirmer:
 - Your goal is NOT to write tests that pass against the current implementation. Your goal is

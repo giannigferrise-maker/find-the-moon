@@ -8,11 +8,12 @@ a structured requirements delta, then writes the SRS changes and delta file.
 Verification (tests, VTM) is owned entirely by Session 3 — this session writes
 ONLY requirements and the delta file.
 
-Delta design — four signals Sessions 2 and 3 act on:
-  New requirements       → Session 2: implement | Session 3: write new test block
-  Updated requirements   → Session 2: update code value | Session 3: update existing test expected value
-  Violated requirements  → Session 2: fix code toward req | Session 3: existing test should now pass
-  Implementation note    → Session 2: fix code | Session 3: no test change needed
+Delta design — five signals Sessions 2 and 3 act on:
+  New requirements        → S2: implement  | S3: write new test block
+  Updated requirements    → S2: update code values | S3: update existing test expected values
+  Deleted requirements    → S2: remove code | S3: remove corresponding test block
+  Violated requirements   → S2: fix code toward req | S3: existing tests should now pass
+  Implementation guidance → S2: apply described fix | S3: no test change (A0/A2 types)
 """
 
 import os
@@ -94,51 +95,171 @@ The delta is the authoritative specification that Sessions 2 (coding) and 3 (ver
 will act on — they do NOT use the issue body as their implementation target. \
 Your delta must be complete and unambiguous.
 
-STEP 1 — Classify the issue:
+════════════════════════════════════════════════════════════
+STEP 1 — CLASSIFY THE ISSUE
+════════════════════════════════════════════════════════════
 
-If this is a DEFECT (unintended behavior, crash, missing feature that should exist):
-- Defect-A1: A clear requirement already exists and the code is not meeting it. \
-  Identify which requirement(s) are being violated.
-- Defect-A2: The bug is an implementation detail too low-level to have a formal requirement \
-  (null guard, edge case, crash). Describe the fix needed; no SRS change.
-- Defect-A3: The defect exposes a gap — behavior that matters but was never specified. \
-  Add a new requirement or clarify an existing one.
+CHECK THESE SPECIAL CASES FIRST before choosing a classification:
 
-If this is an ENHANCEMENT (intentional change to existing or new behavior):
-- Enhancement-A1: Entirely new behavior not currently in the SRS. Add new requirements.
-- Enhancement-A2: Changing an existing specified behavior (color, threshold, label, value). \
-  Update the existing requirement in-place; do NOT add a duplicate.
-- Enhancement-A3: Both — some new behavior AND changes to existing requirements.
+AMBIGUITY: If the issue description is unclear about whether it is a defect or an \
+enhancement, or what the intended correct behavior should be, make the most reasonable \
+assumption, state it explicitly in `assumptions`, and set `confidence` to "low" so the \
+human reviewer can verify before applying label 2-code-ready.
 
-STEP 2 — Produce the delta fields:
+INSUFFICIENT INFORMATION: If the issue lacks enough technical detail to produce a \
+reliable delta (e.g. a vague "the app feels wrong" with no specifics), set `confidence` \
+to "low" and describe exactly what information is missing in `assumptions`. Produce the \
+best delta you can; do not block.
+
+MULTI-TYPE ISSUE: If the issue requires BOTH fixing broken behavior (defect) AND adding \
+new capability (enhancement), use classification "Defect+Enhancement". Populate \
+`violated_requirements` for the defect component AND `srs_additions` for the enhancement \
+component simultaneously. Do not force-fit into a single classification and drop half \
+the issue.
+
+─────────────────────────────────────────────────
+DEFECT classifications (the app is not doing what it should):
+
+IMPORTANT: Before classifying any defect as A2, check whether any existing requirement \
+in the SRS — especially reliability (FTM-RR-*), functional (FTM-FR-*), security \
+(FTM-SC-*), or privacy (FTM-PS-*) requirements — already covers this scenario. \
+If a requirement exists that mandates the correct behavior, the classification is A1, \
+not A2, even if the fix itself feels low-level.
+
+Defect-A1: A clear requirement exists and the code is not meeting it.
+  → violated_requirements populated. srs_additions empty.
+
+Defect-A2: A true implementation detail — no existing requirement covers this scenario \
+  AND the behavior is too low-level to formally specify (null guard, unhandled exception, \
+  race condition, async timing bug). Verify no existing requirement covers it first.
+  → implementation_guidance populated. All SRS fields empty.
+
+Defect-A3: The defect exposes a specification gap — the behavior matters and should be \
+  formally specified going forward. Add a new requirement or clarify an existing one.
+  → srs_additions populated. violated_requirements is EMPTY (there was no requirement \
+  to violate — that is what makes it A3, not A1).
+
+─────────────────────────────────────────────────
+ENHANCEMENT classifications (the app should work differently going forward):
+
+Enhancement-A0: The change is intentional but below SRS specification level — a pure \
+  style, layout, copy, or implementation detail that does not merit a formal requirement. \
+  Examples: border-radius, spacing, CSS animation timing, a label string not behaviorally \
+  specified in the SRS, minor layout repositioning. Do NOT add a requirement to the SRS \
+  for these — that over-specifies. Describe what to change in implementation_guidance.
+  → implementation_guidance populated. All SRS fields empty.
+
+Enhancement-A1: Entirely new behavior not currently in the SRS.
+  → srs_additions populated.
+
+Enhancement-A2: Changing an existing specified behavior (a value, threshold, color, or \
+  label that IS already in the SRS). Update the existing requirement in-place — do NOT \
+  add a duplicate requirement alongside the old one.
+  IMPORTANT: scan the FULL SRS for ALL occurrences of the value being changed. A value \
+  may appear in multiple requirements (e.g. a refresh interval in both FTM-FR-016 and \
+  FTM-PR-004). Every occurrence must be updated — a partial update leaves the SRS \
+  internally inconsistent.
+  → srs_in_place_updates populated with ALL affected requirements.
+
+Enhancement-A3: Both new behavior AND changes to existing requirements.
+  IMPORTANT: both srs_additions AND srs_in_place_updates are REQUIRED for A3. \
+  Populating only one leaves the SRS contradictory (e.g. the existing requirement still \
+  says "shall always show X" while the new requirement says "X is now user-configurable").
+  → srs_additions AND srs_in_place_updates both populated.
+
+Feature removal: If this issue removes an existing feature entirely, use Enhancement-A2 \
+  (if the feature is optional/being replaced) or Enhancement-A3 (if replacement requires \
+  new requirements). Use srs_deletions to identify requirements that are now obsolete and \
+  must be removed from the SRS entirely.
+
+Defect+Enhancement: Use when the issue both fixes broken behavior AND adds new capability. \
+  → violated_requirements AND srs_additions both populated.
+
+─────────────────────────────────────────────────
+DOMAIN-SPECIFIC GUIDANCE:
+
+Security issues (XSS, injection, data exposure, SRI, key exposure):
+  Check existing security requirements first (FTM-SC-001 through FTM-SC-004, Amendment B) \
+  and privacy requirements (FTM-PS-001 through FTM-PS-004).
+  — Broken SRI hash, exposed data → likely Defect-A1 if a security requirement covers it.
+  — New attack surface not covered → Defect-A3. New security requirements must be specific \
+    and testable: "the system shall reject zip code input containing non-numeric characters" \
+    not "the system shall be secure."
+  Mark the `diagnosis` field with the prefix SECURITY: so Session 4 (security review) \
+  is aware this issue has security implications.
+
+Accessibility issues (ARIA, keyboard navigation, contrast, screen readers):
+  Check FTM-UR-001 ("operable by a child aged 8+") — some a11y issues fall under this.
+  — Missing ARIA, broken keyboard nav, contrast failure with no existing a11y requirement \
+    → typically Defect-A3 (gap that should be specified).
+  — New a11y capability → Enhancement-A1.
+  Where applicable, reference the specific WCAG 2.1 criterion (e.g. "WCAG 2.1 SC 1.4.3 \
+  contrast ratio") in the new requirement text so it is verifiable.
+  Mark the `diagnosis` field with the prefix ACCESSIBILITY: so reviewers are aware.
+
+Performance issues (slow load, janky animation, calculation timeout):
+  Check existing performance requirements (FTM-PR-001 through FTM-PR-004).
+  — Violating an existing threshold → Defect-A1.
+  — Performance degradation below a threshold not in the SRS → Defect-A3.
+  — Intentional optimization with no requirement impact → Enhancement-A0.
+  Use implementation_guidance to describe the specific optimization needed, even for A1.
+
+════════════════════════════════════════════════════════════
+STEP 2 — PRODUCE THE DELTA FIELDS
+════════════════════════════════════════════════════════════
 
 srs_additions:
-  New requirement text to APPEND to FTM-SRS-001.md (for Defect-A3, Enhancement-A1, A3).
-  Use INCOSE format (shall/should), next available amendment letter, IDs continuing from last used.
-  Empty string if no new requirements.
+  New requirement text to APPEND to FTM-SRS-001.md.
+  For: Defect-A3, Enhancement-A1, Enhancement-A3, Defect+Enhancement (enhancement component).
+  Use INCOSE format (shall/should), next available amendment letter, IDs continuing from \
+  the last used ID in the SRS. Match the table style of existing amendments exactly.
+  Empty string if not applicable.
 
 srs_in_place_updates:
-  List of in-place edits to EXISTING requirements in FTM-SRS-001.md (for Enhancement-A2, A3).
-  Each entry: req_id, old_string (exact verbatim text in the SRS to replace), \
+  List of targeted edits to EXISTING requirements in FTM-SRS-001.md.
+  For: Enhancement-A2, Enhancement-A3.
+  Each entry: req_id, old_string (exact verbatim text in SRS — long enough to be unique), \
   new_string (replacement), what_changed, old_value, new_value.
-  Empty list if no existing requirements are changing.
+  Scan the full SRS for ALL occurrences of the changing value before producing this list.
+  Empty list if not applicable.
+
+srs_deletions:
+  List of requirements that must be REMOVED ENTIRELY from the SRS (not just changed).
+  For: feature removal, obsolete requirements.
+  Each entry: req_id, old_string (exact verbatim markdown table row to remove, \
+  including the leading pipe and trailing newline), reason.
+  Empty list if not applicable.
 
 violated_requirements:
-  List of existing requirements the code is currently NOT meeting (for Defect-A1, A3).
+  Existing requirements the code is currently NOT meeting.
+  For: Defect-A1, Defect+Enhancement (defect component).
   Each entry: req_id, requirement_text (copy from SRS), violation_description.
-  Empty list if not a defect.
+  NOTE — Defect-A3 ONLY: this field is EMPTY even for A3. A3 means no requirement existed \
+  to be violated — the gap IS the problem. Do not fabricate a violated requirement.
+  Empty list if not applicable.
 
-implementation_note:
-  Plain-language description of the low-level code fix needed (for Defect-A2 only).
-  Empty string if not applicable.
+implementation_guidance:
+  Specific coding direction for Session 2 — file, location, what to change.
+  REQUIRED for: Defect-A2 (the only substantive field for A2) and Enhancement-A0 \
+  (the only substantive field for A0).
+  OPTIONAL for: any other classification where the SRS changes alone may not give \
+  Session 2 enough coding direction (e.g. a complex Defect-A1 fix, a version update \
+  with an SRI hash implication, a performance optimization accompanying an Enhancement-A2).
+  Empty string if not needed.
 
 SCOPE CONSTRAINT — strictly enforced:
 Only add or modify content directly necessitated by this issue. Do NOT touch pre-existing \
-requirements even if you notice defects in them — those belong in separate tickets.
+requirements even if you notice defects — those belong in separate tickets.
+
+════════════════════════════════════════════════════════════
+RESPONSE FORMAT
+════════════════════════════════════════════════════════════
 
 Return ONLY a valid JSON object — no markdown fences, no preamble:
 {{
-  "classification": "Defect-A1 | Defect-A2 | Defect-A3 | Enhancement-A1 | Enhancement-A2 | Enhancement-A3",
+  "classification": "Defect-A1 | Defect-A2 | Defect-A3 | Enhancement-A0 | Enhancement-A1 | Enhancement-A2 | Enhancement-A3 | Defect+Enhancement",
+  "confidence": "high | medium | low",
+  "assumptions": "any assumptions made about ambiguous aspects, or what information is missing if confidence is low; empty string if unambiguous",
   "diagnosis": "plain-language explanation of the issue and your requirements decision",
   "srs_additions": "markdown to append to FTM-SRS-001.md, or empty string",
   "srs_in_place_updates": [
@@ -151,6 +272,13 @@ Return ONLY a valid JSON object — no markdown fences, no preamble:
       "new_value": "new value"
     }}
   ],
+  "srs_deletions": [
+    {{
+      "req_id": "FTM-XX-NNN",
+      "old_string": "exact verbatim markdown table row to remove",
+      "reason": "why this requirement is being removed"
+    }}
+  ],
   "violated_requirements": [
     {{
       "req_id": "FTM-XX-NNN",
@@ -158,7 +286,7 @@ Return ONLY a valid JSON object — no markdown fences, no preamble:
       "violation_description": "how the code is currently failing this requirement"
     }}
   ],
-  "implementation_note": "low-level fix description for Defect-A2, or empty string",
+  "implementation_guidance": "specific coding direction for Session 2, or empty string",
   "pr_summary": "2-3 sentence summary of what changed and why"
 }}"""
 
@@ -175,14 +303,20 @@ message = client.messages.create(
 response_text = message.content[0].text
 data = extract_json(response_text, message)
 
-classification         = data.get('classification', 'Unknown')
-diagnosis              = data.get('diagnosis', '')
-srs_additions          = data.get('srs_additions', '').strip()
-srs_in_place_updates   = data.get('srs_in_place_updates', [])
-violated_requirements  = data.get('violated_requirements', [])
-implementation_note    = data.get('implementation_note', '').strip()
+classification        = data.get('classification', 'Unknown')
+confidence            = data.get('confidence', 'high')
+assumptions           = data.get('assumptions', '').strip()
+diagnosis             = data.get('diagnosis', '')
+srs_additions         = data.get('srs_additions', '').strip()
+srs_in_place_updates  = data.get('srs_in_place_updates', [])
+srs_deletions         = data.get('srs_deletions', [])
+violated_requirements = data.get('violated_requirements', [])
+implementation_guidance = data.get('implementation_guidance', '').strip()
 
 print(f"Classification: {classification}")
+print(f"Confidence: {confidence}")
+if assumptions:
+    print(f"Assumptions: {assumptions}")
 print(f"Diagnosis: {diagnosis}")
 
 # ── apply SRS changes ─────────────────────────────────────────────────────────
@@ -203,14 +337,26 @@ for update in srs_in_place_updates:
     if old_string not in content:
         print(f"WARNING: Skipped in-place update for {req_id} — old_string not found in SRS")
         continue
-    updated = content.replace(old_string, new_string, 1)
-    write_file('FTM-SRS-001.md', updated)
+    write_file('FTM-SRS-001.md', content.replace(old_string, new_string, 1))
     applied_updates.append(update)
     print(f"Updated FTM-SRS-001.md in-place: {req_id} — {update.get('what_changed', '')}")
 
+applied_deletions = []
+for deletion in srs_deletions:
+    req_id     = deletion.get('req_id', '')
+    old_string = deletion.get('old_string', '')
+    if not old_string:
+        print(f"WARNING: Skipped deletion for {req_id} — missing old_string")
+        continue
+    content = read_file('FTM-SRS-001.md')
+    if old_string not in content:
+        print(f"WARNING: Skipped deletion for {req_id} — old_string not found in SRS")
+        continue
+    write_file('FTM-SRS-001.md', content.replace(old_string, '', 1))
+    applied_deletions.append(deletion)
+    print(f"Deleted requirement from FTM-SRS-001.md: {req_id}")
+
 # ── write structured delta file ───────────────────────────────────────────────
-# This is the authoritative handoff to Sessions 2 and 3.
-# Sessions 2 and 3 treat this as their specification — not the issue body.
 
 def fmt_updated_reqs_table(updates):
     if not updates:
@@ -236,10 +382,24 @@ def fmt_violated_reqs(violated):
         )
     return '\n'.join(lines)
 
-new_reqs_section = srs_additions if srs_additions else '(none)'
-updated_reqs_section = fmt_updated_reqs_table(applied_updates)
-violated_reqs_section = fmt_violated_reqs(violated_requirements)
-impl_note_section = implementation_note if implementation_note else '(none)'
+def fmt_deleted_reqs(deletions):
+    if not deletions:
+        return '(none)'
+    lines = []
+    for d in deletions:
+        lines.append(f"- **{d.get('req_id','')}**: {d.get('reason','')}")
+    return '\n'.join(lines)
+
+confidence_note = ''
+if confidence != 'high' or assumptions:
+    confidence_note = f"""
+## Confidence & Assumptions
+**Confidence:** {confidence}
+**Assumptions / information gaps:** {assumptions if assumptions else '(none)'}
+
+⚠️ Confidence is not HIGH — human reviewer should verify the classification and \
+assumptions above before applying label `2-code-ready`.
+"""
 
 delta_content = f"""# Session 1 Requirements Delta — Issue #{issue_number}
 
@@ -251,22 +411,26 @@ Sessions 2 and 3 implement and verify against this delta — not the original is
 
 ## Diagnosis
 {diagnosis}
-
+{confidence_note}
 ## New requirements
 *(Session 2: implement | Session 3: write new test block)*
-{new_reqs_section}
+{srs_additions if srs_additions else '(none)'}
 
 ## Updated requirements in-place
 *(Session 2: update code to new values | Session 3: update expected values in existing tests — do not write new test blocks)*
-{updated_reqs_section}
+{fmt_updated_reqs_table(applied_updates)}
+
+## Deleted requirements
+*(Session 2: remove code implementing this | Session 3: remove the corresponding test block)*
+{fmt_deleted_reqs(applied_deletions)}
 
 ## Violated requirements — defect fix
 *(Session 2: fix code to comply with these requirements | Session 3: existing tests should now pass — do not modify them)*
-{violated_reqs_section}
+{fmt_violated_reqs(violated_requirements)}
 
-## Implementation note — no formal requirement
-*(Session 2: apply this fix | Session 3: no test change needed)*
-{impl_note_section}
+## Implementation guidance
+*(Session 2: apply this | Session 3: no test change needed)*
+{implementation_guidance if implementation_guidance else '(none)'}
 """
 
 write_file('.github/sdlc_session1_delta.md', delta_content)
@@ -280,15 +444,22 @@ changes = []
 if srs_additions:
     changes.append('- Appended new requirements to `FTM-SRS-001.md`')
 if applied_updates:
-    ids = ', '.join(u.get('req_id','') for u in applied_updates)
+    ids = ', '.join(u.get('req_id', '') for u in applied_updates)
     changes.append(f'- Updated existing requirements in-place: {ids}')
+if applied_deletions:
+    ids = ', '.join(d.get('req_id', '') for d in applied_deletions)
+    changes.append(f'- Deleted obsolete requirements: {ids}')
 if violated_requirements:
-    ids = ', '.join(v.get('req_id','') for v in violated_requirements)
-    changes.append(f'- Identified violated requirements (defect fix): {ids}')
-if implementation_note:
-    changes.append('- Implementation note added (no formal requirement change)')
+    ids = ', '.join(v.get('req_id', '') for v in violated_requirements)
+    changes.append(f'- Identified violated requirements (defect): {ids}')
+if implementation_guidance:
+    changes.append('- Implementation guidance provided (no SRS change)')
 if not changes:
     changes.append('- No SRS changes required for this issue')
+
+confidence_warning = ''
+if confidence != 'high':
+    confidence_warning = f'\n## ⚠️ Low Confidence — Human Review Required\n{assumptions}\n'
 
 pr_body = f"""## SDLC Session 1: Requirements Engineering
 
@@ -296,16 +467,18 @@ pr_body = f"""## SDLC Session 1: Requirements Engineering
 {pr_summary}
 
 ## Classification
-{classification}
+{classification} (confidence: {confidence})
 
 ## Changes
 {chr(10).join(changes)}
-
+{confidence_warning}
 ## Review checklist
-- [ ] Classification is correct (Defect vs Enhancement, A1/A2/A3)
-- [ ] Diagnosis accurately describes the issue
+- [ ] Classification is correct (Defect vs Enhancement, subtype)
+- [ ] Confidence and assumptions look reasonable
 - [ ] New requirements follow INCOSE format with correct amendment letter and IDs
 - [ ] Updated requirements change the existing row in-place (no duplicate IDs)
+- [ ] All occurrences of changed values were updated across the SRS
+- [ ] Deleted requirements are truly obsolete (not just changed)
 - [ ] Violated requirements correctly identify what the code must fix toward
 - [ ] Delta is complete enough for Session 2 to implement without reading the issue body
 
@@ -316,7 +489,10 @@ write_file('.github/sdlc_pr_body.md', pr_body)
 
 # ── self-critique loop ────────────────────────────────────────────────────────
 
-has_content = bool(srs_additions or applied_updates or violated_requirements or implementation_note)
+has_content = bool(
+    srs_additions or applied_updates or applied_deletions or
+    violated_requirements or implementation_guidance
+)
 MAX_CRITIQUE_ROUNDS = 2
 
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
@@ -326,55 +502,73 @@ for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
         print("No requirements changes this session — skipping self-critique.")
         break
 
-    srs_new      = srs_additions
-    updates_new  = applied_updates
-    violated_new = violated_requirements
-
     critique_prompt = f"""You are a senior requirements engineer reviewing the output of a \
 requirements engineering session for the "Find the Moon" web application.
 
 Review ONLY the content produced this session. Do not suggest changes to pre-existing content.
 
---- Full SRS for context (do not suggest changes to pre-existing content) ---
+--- Full SRS for context ---
 {srs_content}
 
+--- Classification chosen ---
+{classification} (confidence: {confidence})
+
+--- Assumptions stated ---
+{assumptions if assumptions else '(none)'}
+
 --- Newly appended requirements ---
-{srs_new if srs_new else '(none)'}
+{srs_additions if srs_additions else '(none)'}
 
 --- In-place updates applied ---
-{json.dumps(updates_new, indent=2) if updates_new else '(none)'}
+{json.dumps(applied_updates, indent=2) if applied_updates else '(none)'}
+
+--- Requirements deleted ---
+{json.dumps(applied_deletions, indent=2) if applied_deletions else '(none)'}
 
 --- Violated requirements identified ---
-{json.dumps(violated_new, indent=2) if violated_new else '(none)'}
+{json.dumps(violated_requirements, indent=2) if violated_requirements else '(none)'}
+
+--- Implementation guidance ---
+{implementation_guidance if implementation_guidance else '(none)'}
 
 Check for these defects ONLY:
 
 CLASSIFICATION defects:
-- Wrong classification: e.g. Enhancement-A2 used when no existing requirement covers the \
-  behavior (should be Enhancement-A1), or Defect-A1 used when the requirement text doesn't \
-  actually mandate the behavior in question.
+- Wrong type: e.g. Enhancement-A2 when no existing SRS requirement covers the behavior \
+  (should be A0 or A1). Defect-A2 when an existing requirement already covers the scenario \
+  (should be A1). A3 violated_requirements populated when it should be empty for A3.
+- Multi-type issue forced into single classification, silently dropping part of the issue.
+- Low confidence without assumptions stated.
 
 NEW REQUIREMENTS defects (if any were appended):
 - Amendment letter collision: new amendment must use the next sequential letter.
 - Duplicate requirement IDs: no new ID may match an existing one.
-- Wrong verification method: behavior checkable by code should be Test not Inspection.
-- Non-testable: vague "shall" with no observable pass/fail criterion.
+- Wrong verification method: behavior checkable by code → Test, not Inspection.
+- Non-testable requirement: vague "shall" with no observable pass/fail criterion.
 - Missing "shall" or "should" language.
 - Semantic conflict: new requirement duplicates an existing one (should have updated in-place).
 
-IN-PLACE UPDATES defects (if any were made):
-- old_string that is too short or ambiguous — could match the wrong location in the SRS.
-- new_string that introduces a duplicate requirement (same behavior now specified twice).
-- Value change that conflicts with another existing requirement.
+IN-PLACE UPDATES defects:
+- Incomplete scan: a value appears in multiple SRS requirements but only one was updated.
+- old_string too short or ambiguous — could match the wrong location.
+- Update introduces a contradiction with another existing requirement.
 
-VIOLATED REQUIREMENTS defects (if any were identified):
-- Identified requirement that does not actually mandate the behavior in question.
-- Missing violated requirement: an obvious existing requirement is being broken but wasn't listed.
+DELETIONS defects:
+- Requirement deleted that is still needed (wrong req_id, or deletion is premature).
+- Deletion leaves an orphaned cross-reference in another requirement.
+
+VIOLATED REQUIREMENTS defects:
+- Identified requirement does not actually mandate the behavior in question.
+- Defect-A3 case has violated_requirements populated (should always be empty for A3).
+
+IMPLEMENTATION GUIDANCE defects:
+- Defect-A2 or Enhancement-A0 with empty implementation_guidance (these are the only \
+  substantive output for A0/A2 — empty guidance means Session 2 has nothing to act on).
 
 If you find NO defects, return:
 {{"fixes": [], "critique_summary": "No defects found."}}
 
-If you find defects, return fixes as JSON string replacements against the files:
+If you find defects, return fixes as JSON string replacements:
 {{
   "fixes": [
     {{
