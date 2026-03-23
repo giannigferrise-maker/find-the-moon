@@ -80,7 +80,7 @@
     body.day .clouds { opacity: 1; }
     .cloud {
       position: absolute;
-      background: rgba(168,213,162,0.7);
+      background: rgba(201,184,232,0.7);
       border-radius: 50px;
       filter: blur(8px);
       animation: drift linear infinite;
@@ -943,9 +943,9 @@ function renderClouds(show) {
     el.className = 'cloud';
     el.style.cssText = `top:${c.top};width:${c.width}px;height:${c.height}px;animation-duration:${c.dur}s;animation-delay:${c.delay}s`;
     const b1 = document.createElement('div');
-    b1.style.cssText = `width:${c.width*0.6}px;height:${c.height*1.4}px;top:-50%;left:20%;border-radius:50%;background:rgba(168,213,162,0.7);position:absolute;`;
+    b1.style.cssText = `width:${c.width*0.6}px;height:${c.height*1.4}px;top:-50%;left:20%;border-radius:50%;background:rgba(201,184,232,0.7);position:absolute;`;
     const b2 = document.createElement('div');
-    b2.style.cssText = `width:${c.width*0.45}px;height:${c.height*1.2}px;top:-40%;left:45%;border-radius:50%;background:rgba(168,213,162,0.6);position:absolute;`;
+    b2.style.cssText = `width:${c.width*0.45}px;height:${c.height*1.2}px;top:-40%;left:45%;border-radius:50%;background:rgba(201,184,232,0.6);position:absolute;`;
     el.appendChild(b1); el.appendChild(b2);
     layer.appendChild(el);
   });
