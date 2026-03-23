@@ -115,11 +115,11 @@ Issue #{issue_number}: {issue_title}
 How to read the delta:
 - "New requirements" → implement the new behavior described
 - "Updated requirements in-place" → update the code values to the New value column
-- "Deleted requirements" → remove the code implementing those requirements
+- "Deleted requirements" → remove the code implementing those requirements; set new_string to an empty string — do NOT comment code out
 - "Violated requirements — defect fix" → fix the code so it complies with those requirements
 - "Implementation guidance — no formal requirement" → apply the described low-level fix
 - If the delta says "(none)" for all sections, no code changes are needed
-- If confidence is "low", the requirements engineer flagged assumptions — review them before implementing
+- If confidence is "low", the requirements engineer flagged assumptions — review them before implementing, and note any concerns in pr_summary so the human reviewer can verify before merging
 
 Your task:
 Implement exactly what the delta specifies. Follow these rules:
@@ -128,6 +128,7 @@ Implement exactly what the delta specifies. Follow these rules:
 - Do not add comments or docstrings to code you did not change
 - Do not introduce new dependencies
 - If the fix is only in index.html, leave moonLogic.js empty. Vice versa.
+- When the delta specifies an exact value (color hex, numeric, etc.), always use that exact format in code, even if existing code uses a different format for similar values
 - Do NOT generate, compute, or guess any cryptographic hash values (SHA-256, SHA-384, SHA-512, etc.). If a hash is required, insert a TODO placeholder such as `TODO: compute and insert correct hash` so the human reviewer knows to fill it in.
 
 Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
@@ -143,7 +144,7 @@ Return ONLY a valid JSON object — no markdown fences, no preamble — with exa
 }}
 
 The replacements array may contain multiple entries if changes span multiple locations.
-Each old_string must be unique enough in the file to identify exactly one location.
+Each old_string must be unique enough in the file to identify exactly one location. If the target region is short, include 2–3 surrounding lines as context to ensure uniqueness.
 If no code changes are needed, return an empty replacements array.
 """
 
@@ -163,6 +164,15 @@ data = extract_json(response_text, message)
 # ── apply replacements ────────────────────────────────────────────────────────
 
 replacements = data.get('replacements', [])
+
+# Guard: implementation phase may only touch these two files
+ALLOWED_IMPL_FILES = {'index.html', 'src/moonLogic.js'}
+for r in replacements:
+    if r.get('file') not in ALLOWED_IMPL_FILES:
+        print(f"❌ INVALID FILE PATH in replacements: {r.get('file')!r}")
+        print(f"Session 2 may only modify: {', '.join(sorted(ALLOWED_IMPL_FILES))}")
+        sys.exit(1)
+
 if not replacements:
     print("No code changes needed for this issue.")
 else:
@@ -173,11 +183,13 @@ else:
 # Deterministic regex scans on every new_string. Does not rely on the LLM.
 # Fabricated hash → hard block (sys.exit). TODO leftover → warning in PR body.
 
-SRI_HASH_RE = re.compile(r'integrity=["\']sha(256|384|512)-[A-Za-z0-9+/]{20,}')
-TODO_RE      = re.compile(r'TODO', re.IGNORECASE)
+SRI_HASH_RE  = re.compile(r'integrity=["\']sha(256|384|512)-[A-Za-z0-9+/]{20,}')
+TODO_RE       = re.compile(r'TODO', re.IGNORECASE)
+SECURITY_RE   = re.compile(r'\beval\s*\(|document\.write\s*\(|new\s+Function\s*\(')
 
-todos_remaining  = []  # files with TODO placeholders still present
-fabricated_hashes = [] # files where a hash appeared in new_string but not old_string
+todos_remaining     = []  # files with TODO placeholders still present
+fabricated_hashes   = [] # files where a hash appeared in new_string but not old_string
+security_violations = [] # files where dangerous patterns appeared in new_string but not old_string
 
 for r in replacements:
     new_str = r.get('new_string', '')
@@ -188,6 +200,10 @@ for r in replacements:
     if SRI_HASH_RE.search(new_str) and not SRI_HASH_RE.search(old_str):
         fabricated_hashes.append(file)
 
+    # Security regression: eval/document.write/new Function in new_string but not old_string
+    if SECURITY_RE.search(new_str) and not SECURITY_RE.search(old_str):
+        security_violations.append(file)
+
     # TODO leftover
     if TODO_RE.search(new_str):
         todos_remaining.append(file)
@@ -196,6 +212,11 @@ if fabricated_hashes:
     print(f"❌ FABRICATED HASH DETECTED in: {', '.join(set(fabricated_hashes))}")
     print("Session 2 generated a cryptographic hash value instead of a TODO placeholder.")
     print("This is a critical error. Aborting before commit.")
+    sys.exit(1)
+
+if security_violations:
+    print(f"❌ SECURITY REGRESSION DETECTED in: {', '.join(set(security_violations))}")
+    print("New code contains eval(), document.write(), or new Function() — aborting.")
     sys.exit(1)
 
 if todos_remaining:
@@ -228,6 +249,9 @@ for the "Find the Moon" web app.
 
 Issue being implemented: #{issue_number} — {issue_title}
 
+--- Session 1 Requirements Delta (use this to assess what changes are in scope) ---
+{srs_delta}
+
 The following replacements were just applied to the codebase:
 {replacements_summary}
 
@@ -252,7 +276,6 @@ Check for these specific defect categories — nothing else:
 
 4. JS SYNTAX ERRORS (in new_string regions only)
    - Template literal opened with backtick but no matching closing backtick in same region
-   - `{{` count ≠ `}}` count within a new_string block (imbalanced braces)
    - `async function` or `async (` introduced in new code where call site in old_string
      did NOT use `await` — silent Promise ignored
 
@@ -369,6 +392,8 @@ Rules:
 - Do not add new imports or dependencies not already in the file
 - If the code change is only in index.html (UI/DOM) with no logic changes to moonLogic.js,
   return an empty replacements array — unit tests cover logic, not DOM
+- If the delta shows "Deleted requirements" that correspond to logic removed from moonLogic.js,
+  also delete the corresponding test cases — set new_string to an empty string for those test blocks
 
 Return ONLY a valid JSON object — no markdown fences, no preamble:
 {{
@@ -453,6 +478,9 @@ if not passed:
 the "Find the Moon" web app is failing after code changes were applied for issue \
 #{issue_number}: {issue_title}
 
+--- Session 1 Requirements Delta (use this to identify stale tests vs genuine bugs) ---
+{srs_delta}
+
 --- Failing test output ---
 {trimmed_output}
 
@@ -470,6 +498,11 @@ Your task: fix the failures by fixing the SOURCE CODE. Follow these rules strict
   a factual error in the assertion logic itself (e.g. wrong expected value due to a math
   mistake in the test). Even then, only fix the assertion value — never delete or weaken
   the test.
+- STALE PRE-EXISTING TEST EXCEPTION: if a pre-existing test (not added this session) fails
+  because it tests the old expected output of a function that was intentionally changed by
+  this issue's delta, it may be a stale test the unit test maintenance step missed. You may
+  update its expected value only if you can confirm the new value matches the delta's
+  documented new behaviour. Do not revert the intentional code change to satisfy a stale test.
 - If you cannot fix the code to satisfy the test, return an empty replacements array and
   explain why in fix_summary — do NOT touch the test as a workaround.
 - Make the minimal change to get the tests passing

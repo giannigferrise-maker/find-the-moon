@@ -76,6 +76,13 @@ issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_content = read_file('FTM-SRS-001.md', max_chars=20000)
 
+_srs_truncated = len(srs_content) == 20000
+srs_truncation_note = (
+    "\n⚠️ NOTE: The SRS has been truncated to 20,000 chars — later requirements and "
+    "amendments may not be visible. Account for this when scanning for existing "
+    "requirements, IDs, and amendment letters.\n"
+) if _srs_truncated else ''
+
 # ── prompt ────────────────────────────────────────────────────────────────────
 
 prompt = f"""You are a software requirements engineer for the "Find the Moon" web \
@@ -89,7 +96,7 @@ Issue #{issue_number}: {issue_title}
 
 --- Current SRS (FTM-SRS-001.md) ---
 {srs_content}
-
+{srs_truncation_note}
 Your job is to diagnose this issue and produce a complete requirements delta. \
 The delta is the authoritative specification that Sessions 2 (coding) and 3 (verification) \
 will act on — they do NOT use the issue body as their implementation target. \
@@ -120,6 +127,11 @@ the issue.
 ─────────────────────────────────────────────────
 DEFECT classifications (the app is not doing what it should):
 
+DEFECT PRE-CHECK: Before applying any Defect classification, ask: "Was the reported \
+behavior ever explicitly required — either by the SRS or by the intent of a prior issue?" \
+If the behavior was never required and the app simply never did it, classify as \
+Enhancement (A0, A1, or A3) rather than Defect.
+
 IMPORTANT: Before classifying any defect as A2, check whether any existing requirement \
 in the SRS — especially reliability (FTM-RR-*), functional (FTM-FR-*), security \
 (FTM-SC-*), or privacy (FTM-PS-*) requirements — already covers this scenario. \
@@ -139,6 +151,13 @@ Defect-A3: The defect exposes a specification gap — the behavior matters and s
   → srs_additions populated. violated_requirements is EMPTY (there was no requirement \
   to violate — that is what makes it A3, not A1).
 
+A1 vs A3 TIEBREAKER: If an existing requirement partially covers the scenario but does \
+not explicitly mandate the correct behavior for this specific case (e.g. the req says \
+"shall display moon position" but says nothing about what happens when location is \
+unavailable), classify as A3 — the gap needs to be specified. Only use A1 when the \
+existing requirement unambiguously mandates the correct behavior and the code is simply \
+not meeting it.
+
 ─────────────────────────────────────────────────
 ENHANCEMENT classifications (the app should work differently going forward):
 
@@ -147,6 +166,11 @@ Enhancement-A0: The change is intentional but below SRS specification level — 
   Examples: border-radius, spacing, CSS animation timing, a label string not behaviorally \
   specified in the SRS, minor layout repositioning. Do NOT add a requirement to the SRS \
   for these — that over-specifies. Describe what to change in implementation_guidance.
+  DECISION TEST — A0 vs A1: Ask "would a developer reasonably implement this change \
+  differently (e.g. choosing a different color or layout) without violating user intent?" \
+  If yes → A0 (implementation detail, guidance only). If the issue implies a specific \
+  observable behavior that must be preserved exactly and could be regressed → A1 (formal \
+  requirement).
   → implementation_guidance populated. All SRS fields empty.
 
 Enhancement-A1: Entirely new behavior not currently in the SRS.
@@ -213,6 +237,15 @@ srs_additions:
   For: Defect-A3, Enhancement-A1, Enhancement-A3, Defect+Enhancement (enhancement component).
   Use INCOSE format (shall/should), next available amendment letter, IDs continuing from \
   the last used ID in the SRS. Match the table style of existing amendments exactly.
+  AMENDMENT LETTER RULE: Scan ALL amendment letters already used anywhere in the SRS \
+  (including letters that appear only as in-place edits with no separate section heading) \
+  before choosing the next letter. In-place updates from prior issues may have consumed \
+  letters — do not reuse them.
+  VERIFICATION METHOD: For each new requirement, choose the correct method:
+    - Test: behavior can be verified by running code (DOM state, computed value, network call)
+    - Inspection: verified by reading source code or configuration (e.g. SRI hash present)
+    - Analysis: verified by calculation or reasoning (e.g. math formula correctness)
+  Default to Test unless the behavior cannot be observed at runtime.
   Empty string if not applicable.
 
 srs_in_place_updates:
@@ -228,6 +261,9 @@ srs_deletions:
   For: feature removal, obsolete requirements.
   Each entry: req_id, old_string (exact verbatim markdown table row to remove, \
   including the leading pipe and trailing newline), reason.
+  Example old_string: "| FTM-FR-016 | The system shall refresh moon data every 60 seconds. | Test |\n"
+  The string must be long enough to be unique — include surrounding rows if the row alone \
+  is ambiguous.
   Empty list if not applicable.
 
 violated_requirements:
@@ -250,6 +286,24 @@ implementation_guidance:
 SCOPE CONSTRAINT — strictly enforced:
 Only add or modify content directly necessitated by this issue. Do NOT touch pre-existing \
 requirements even if you notice defects — those belong in separate tickets.
+
+════════════════════════════════════════════════════════════
+SELF-VERIFICATION — complete this before responding
+════════════════════════════════════════════════════════════
+
+Before producing the JSON, verify:
+1. Classification matches the diagnosis evidence (correct type and subtype).
+2. SRS fields are populated correctly for the chosen classification:
+   - A0/A2: SRS fields empty, implementation_guidance non-empty.
+   - A1: violated_requirements non-empty, srs_additions empty.
+   - A3: srs_additions non-empty, violated_requirements EMPTY.
+   - A2/A3: srs_in_place_updates covers ALL occurrences of the changed value.
+   - Defect+Enhancement: both violated_requirements and srs_additions non-empty.
+3. srs_additions uses the next unused amendment letter (scanned from the full SRS).
+4. No new requirement ID duplicates an existing ID in the SRS.
+5. Each new requirement has an observable pass/fail criterion and the correct \
+   verification method (Test / Inspection / Analysis).
+6. All srs_in_place_updates old_strings are verbatim and unique in the SRS.
 
 ════════════════════════════════════════════════════════════
 RESPONSE FORMAT
@@ -337,6 +391,9 @@ for update in srs_in_place_updates:
     if old_string not in content:
         print(f"WARNING: Skipped in-place update for {req_id} — old_string not found in SRS")
         continue
+    if content.count(old_string) > 1:
+        print(f"WARNING: Skipped in-place update for {req_id} — old_string matches {content.count(old_string)} locations; provide a longer unique string")
+        continue
     write_file('FTM-SRS-001.md', content.replace(old_string, new_string, 1))
     applied_updates.append(update)
     print(f"Updated FTM-SRS-001.md in-place: {req_id} — {update.get('what_changed', '')}")
@@ -351,6 +408,9 @@ for deletion in srs_deletions:
     content = read_file('FTM-SRS-001.md')
     if old_string not in content:
         print(f"WARNING: Skipped deletion for {req_id} — old_string not found in SRS")
+        continue
+    if content.count(old_string) > 1:
+        print(f"WARNING: Skipped deletion for {req_id} — old_string matches {content.count(old_string)} locations; provide a longer unique string")
         continue
     write_file('FTM-SRS-001.md', content.replace(old_string, '', 1))
     applied_deletions.append(deletion)
@@ -597,6 +657,7 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         print("No defects found — stopping critique loop.")
         break
 
+    ALLOWED_CRITIQUE_FILES = {'FTM-SRS-001.md'}
     applied_fixes = 0
     for fix in fixes:
         file_path  = fix.get('file', '')
@@ -604,6 +665,9 @@ Return ONLY valid JSON — no markdown fences, no preamble.
         new_string = fix.get('new_string', '')
         if not file_path or not old_string:
             print(f"WARNING: Skipped fix — missing file or old_string.")
+            continue
+        if file_path not in ALLOWED_CRITIQUE_FILES:
+            print(f"WARNING: Skipped fix — {file_path} is outside allowed file set {ALLOWED_CRITIQUE_FILES}.")
             continue
         content = read_file(file_path)
         if old_string not in content:

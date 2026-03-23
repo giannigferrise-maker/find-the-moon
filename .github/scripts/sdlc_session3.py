@@ -167,6 +167,19 @@ jest_tests           = read_file('__tests_verify__/verification.test.js', max_ch
 playwright_tests     = read_file('__tests_verify__/verification.spec.js', max_chars=30000)
 traceability_content = read_file('traceability-matrix.txt', max_chars=40000)
 
+# Detect truncation so we can warn the model — a truncated test file means some existing
+# test blocks may not be visible even though their IDs appear in the already-covered list.
+_truncated = []
+if len(jest_tests) == 30000:        _truncated.append('verification.test.js')
+if len(playwright_tests) == 30000:  _truncated.append('verification.spec.js')
+truncation_note = (
+    f"\n⚠️ TRUNCATION WARNING: The following test files were too large to show in full "
+    f"and have been cut off at 30,000 chars: {', '.join(_truncated)}. "
+    f"The already-covered requirement ID list above is authoritative — some test blocks "
+    f"may exist in the file but not be visible in the truncated content shown here. "
+    f"Do not write new blocks for IDs in the already-covered list.\n"
+) if _truncated else ''
+
 # Determine which requirement IDs already have test coverage — passed to Claude
 # so it doesn't write duplicate test blocks, and used as a code-level guardrail.
 already_covered = sorted(get_covered_req_ids(
@@ -203,7 +216,7 @@ The Session 1 delta below is your authoritative specification — not the origin
 
 --- Requirement IDs that already have test coverage ---
 {', '.join(already_covered) if already_covered else '(none)'}
-
+{truncation_note}
 HOW TO READ THE DELTA — five sections, five actions:
 
 1. "New requirements" → Write NEW test blocks for these. Each uncovered Test-method requirement \
@@ -211,17 +224,35 @@ HOW TO READ THE DELTA — five sections, five actions:
 
 2. "Updated requirements in-place" → These requirement IDs ARE in the already-covered list above. \
    Do NOT write new test blocks for them. Instead, return string replacements in `test_updates` \
-   that update the expected values in the EXISTING test blocks to match the new values in the delta.
+   that update the expected values in the EXISTING test blocks to match the new values in the delta. \
+   Also append an update note to `traceability_entries` documenting the change (e.g. \
+   "FTM-XX-NNN: updated expected value from X to Y per issue #N"). \
+   Exception: if an updated requirement ID is NOT in the already-covered list, it has no existing \
+   test. Treat it like section 1 (New requirements) and write a new test block instead.
 
 3. "Deleted requirements" → Return string replacements in `test_updates` that REMOVE the \
    existing test block for each deleted requirement ID. Replace the entire describe block \
-   with an empty string. Also note the deletion in `traceability_entries` as a removal.
+   with an empty string. Check BOTH verification.test.js and verification.spec.js — if the \
+   deleted requirement has a describe block in either file, return a test_updates entry for \
+   each file. For old_string, capture the ENTIRE describe block from its opening line through \
+   its closing brace — the "minimum replacement" guideline does not apply here. \
+   Also note the deletion in `traceability_entries` as a removal.
 
 4. "Violated requirements — defect fix" → These requirements already have tests. The code was \
    just fixed to comply. Do NOT modify those tests — they should now pass as-is. Return nothing \
-   for these in any field.
+   for these in any field. \
+   Exception: if a violated requirement ID is NOT in the already-covered list above, it has no \
+   test. Treat it like section 1 (New requirements) and write a new test block for it.
 
 5. "Implementation guidance — no formal requirement" → No test action needed. Return nothing.
+
+If the same requirement ID appears in more than one delta section, apply only the strongest \
+action: New requirements > Updated requirements > Deleted requirements > Violated requirements \
+> Implementation guidance.
+
+All requirement IDs you write tests for must exist in the Full SRS above. If a delta section \
+references an ID you cannot find in the SRS, do not write a test for it — note the discrepancy \
+in your summary instead.
 
 MINDSET — think like an adversary, not a confirmer:
 - Your goal is NOT to write tests that pass against the current implementation. Your goal is
@@ -231,17 +262,24 @@ MINDSET — think like an adversary, not a confirmer:
 CORRECTNESS:
 - Use the Test Guide for correct element IDs, selectors, color formats, and known pitfalls
 - Tests must be deterministic — no real network calls, no real GPS, no real time
+- Framework selection: pure JS logic requirements → Jest only; browser/DOM/visual rendering \
+  requirements → Playwright only; requirements covering both a logic component and a visible \
+  result → tests in both. When uncertain, prefer Playwright for anything a user would observe.
+- When a requirement specifies an exact value (a specific color, numeric threshold, or string), \
+  assert that exact value in the test — do not use a range or regex unless the requirement \
+  itself specifies a range.
 - Jest tests: use pure JS logic, no browser, mock external dependencies
 - Playwright tests: use page mocks for SunCalc and network calls (follow existing mock patterns)
 - Do not add new imports or dependencies not already in the file
 - For test_updates: return the minimum replacement needed to update the expected value — \
-  do not rewrite the whole test block
+  do not rewrite the whole test block. Include enough surrounding context in old_string \
+  (1–2 lines above/below the changed value) to guarantee it appears exactly once in the file.
 
 Return ONLY a valid JSON object — no markdown fences, no preamble — with exactly these keys:
 {{
   "jest_tests": "complete Jest test code to append for NEW requirements, or empty string",
   "playwright_tests": "complete Playwright test code to append for NEW requirements, or empty string",
-  "traceability_entries": "VTM entries for NEW requirements only, or empty string",
+  "traceability_entries": "Content to append to the VTM. Three cases: (1) NEW requirement → append a full structured entry matching the format of existing VTM entries exactly; (2) UPDATED requirement → append a one-line note, e.g. 'UPDATE FTM-XX-NNN: expected value changed from X to Y (issue #N)'; (3) DELETED requirement → append a one-line note, e.g. 'REMOVED FTM-XX-NNN: requirement deleted (issue #N)'. Use empty string if nothing applies.",
   "test_updates": [
     {{
       "file": "__tests_verify__/verification.test.js or __tests_verify__/verification.spec.js",
@@ -421,6 +459,10 @@ If you find defects, return a JSON object with fix replacements:
   "critique_summary": "brief description of what was fixed"
 }}
 
+IMPORTANT: Do NOT propose fixes that remove, weaken, or loosen correct test assertions. \
+If you are uncertain whether an assertion is correct, leave it unchanged and note it in \
+critique_summary instead of modifying it.
+
 Return ONLY valid JSON — no markdown fences, no preamble.
 """
 
@@ -466,10 +508,14 @@ FIX_RULES = f"""STRICT RULES — read carefully before proposing any fix:
   in the "Updated requirements in-place" section of the delta below, this is a stale test
   (the requirement changed and the test was not fully updated). Fix it by updating the
   expected value to the NEW value from the delta. This is not weakening an assertion —
-  it is correcting a stale one.
+  it is correcting a stale one. Note: if the stale value is not present in the test file
+  (because a test_update replacement was silently skipped due to an old_string mismatch),
+  directly locate the test block for that requirement ID and apply the correct new value.
 - For all other value mismatches: if the test expects X but the app returns Y and there is
   no delta entry explaining the change, record it in "app_bugs" — the app must be fixed
   in Session 2, not here.
+- If you are uncertain whether a failure is a test authoring error or an app bug, do NOT
+  modify the test. Record it in "app_bugs" and explain the ambiguity in "summary".
 
 --- Session 1 delta (use this to identify stale tests vs app bugs) ---
 {srs_delta}"""
