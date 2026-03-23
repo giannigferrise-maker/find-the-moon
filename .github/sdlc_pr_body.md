@@ -1,16 +1,16 @@
 ## SDLC Session 2: Code Implementation
 
 ## Summary
-No changes to index.html or src/moonLogic.js are required for this issue. The fix consolidates three duplicate FTM-FR-033 test.describe blocks in tests_verify/verification.spec.js into a single canonical block covering cloud layer presence in day theme, sage green fill color (#a8d5a2), active cloud animation, and cloud absence in night theme — but that file was not provided for editing.
+Reverts the daytime cloud fill color from sage green (rgba(168,213,162,0.7) / #a8d5a2) back to lavender (rgba(201,184,232,0.7) / #c9b8e8) per Issue #49 and Amendment E. Two occurrences were updated: the CSS rule for the `.cloud` selector and the inline background styles set on the cloud bump elements created in `renderClouds()`. No other properties, selectors, or files were modified.
 
 ## Changes
-- No code changes required
+- Modified `index.html`
 
 ## Self-Critique
 - Round 1: No defects found.
 
 ## Unit Tests
-- Maintenance: Not run (no code replacements were applied).
+- Maintenance: The code change is purely a CSS color value update in index.html (rgba(168,213,162,0.7) → rgba(201,184,232,0.7)) with no changes to any logic in src/moonLogic.js. Unit tests cover pure JavaScript logic, not DOM or CSS, so no test changes are needed.
 - Result: All unit tests passed on first run.
 
 ## Review checklist
