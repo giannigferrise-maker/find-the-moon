@@ -6,7 +6,7 @@ on:
 
 jobs:
   security-review:
-    if: github.event.label.name == '4-security-ready'
+    if: false  # Disabled — replaced by sdlc-orchestrator.yml
     runs-on: ubuntu-latest
     permissions:
       contents: write

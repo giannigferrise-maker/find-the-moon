@@ -6,7 +6,7 @@ on:
 
 jobs:
   requirements-and-tests:
-    if: github.event.label.name == '1-reqs-ready'
+    if: false  # Disabled — replaced by sdlc-orchestrator.yml
     runs-on: ubuntu-latest
     permissions:
       contents: write

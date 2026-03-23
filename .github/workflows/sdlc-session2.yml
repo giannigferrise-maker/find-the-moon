@@ -6,7 +6,7 @@ on:
 
 jobs:
   code-implementation:
-    if: github.event.label.name == '2-code-ready'
+    if: false  # Disabled — replaced by sdlc-orchestrator.yml
     runs-on: ubuntu-latest
     permissions:
       contents: write
