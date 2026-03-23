@@ -19,6 +19,7 @@ Delta design — five signals Sessions 2 and 3 act on:
 import os
 import re
 import json
+import datetime
 import anthropic
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ def write_file(path, content):
 issue_number = os.environ['ISSUE_NUMBER']
 issue_title  = os.environ['ISSUE_TITLE']
 issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
+today        = datetime.date.today().strftime('%b %-d, %Y')  # e.g. "Mar 23, 2026"
 
 srs_content = read_file('FTM-SRS-001.md', max_chars=20000)
 
@@ -92,6 +94,8 @@ srs_truncation_note = (
 prompt = f"""You are a software requirements engineer for the "Find the Moon" web \
 application — a browser-based tool showing users where the moon is, intended for general \
 public use including children.
+
+Today's date: {today}
 
 A GitHub issue has been approved for implementation:
 
@@ -251,6 +255,13 @@ srs_additions:
     - Analysis: verified by calculation or reasoning (e.g. math formula correctness)
   Default to Test unless the behavior cannot be observed at runtime.
   Empty string if not applicable.
+  SRS VERSION UPDATE — MANDATORY when srs_additions is non-empty:
+  Whenever you append a new amendment, you MUST also include two srs_in_place_updates entries:
+  1. Increment the `| **Version** |` metadata field at the top of the SRS to the next minor
+     version (e.g. 1.4 → 1.5).
+  2. Replace `date TBD` in the new amendment's version history line with today's date ({today}).
+  These two updates are not optional — a new amendment without a version bump and a real date
+  leaves the SRS in an inconsistent state.
 
 srs_in_place_updates:
   List of targeted edits to EXISTING requirements in FTM-SRS-001.md.
@@ -308,6 +319,8 @@ Before producing the JSON, verify:
 5. Each new requirement has an observable pass/fail criterion and the correct \
    verification method (Test / Inspection / Analysis).
 6. All srs_in_place_updates old_strings are verbatim and unique in the SRS.
+7. If srs_additions is non-empty: srs_in_place_updates includes a version bump and a date
+   replacement for the new amendment (today = {today}).
 
 ════════════════════════════════════════════════════════════
 RESPONSE FORMAT
