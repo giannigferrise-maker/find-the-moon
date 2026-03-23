@@ -216,6 +216,11 @@ Perform a quality review covering the following ISO 62304-inspired activities:
    - Does every new requirement have at least one test in the traceability matrix?
    - Are there any requirements marked "Test" in the SRS with no test entry?
    - Are there any test entries with no corresponding SRS requirement (orphaned tests)?
+   - Are there any test describe blocks REMOVED in the diff for requirements that were NOT
+     modified or deleted in this change? Look carefully at the test diffs for lines beginning
+     with "-" that remove describe blocks or entire test cases. A test block may only be
+     removed if its requirement was explicitly changed or deleted in the delta. Any other
+     removal is a FAIL — it silently degrades verification coverage with no justification.
 
 4. TRACEABILITY (ISO 62304 §5.7)
    - Is the traceability matrix up to date with the new requirements?
