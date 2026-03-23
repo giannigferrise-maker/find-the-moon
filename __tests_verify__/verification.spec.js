@@ -485,8 +485,8 @@ test.describe('[FTM-FR-033] Day theme — peach orange animated clouds', () => {
   });
 
   test('cloud fill color is peach orange (#FFB347) in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #54): cloud color must be #FFB347 (soft peach orange).
-    // CSS uses rgba(255,179,71,...) — the rgba equivalent of #FFB347
+    // Requirement (FTM-VT-008 / Issue #54): cloud color must be #FFB347 (soft peach orange).
+    // CSS uses rgba(255,179,71,...) — the rgba equivalent of #FFB347.
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
       if (!cloud) return null;
@@ -494,31 +494,43 @@ test.describe('[FTM-FR-033] Day theme — peach orange animated clouds', () => {
       return style.backgroundColor || style.fill || null;
     });
     expect(cloudColor).toMatch(/rgba?\(255,\s*179,\s*71/i);
+    // Must NOT be the reverted lavender color
+    expect(cloudColor).not.toMatch(/rgba?\(201,\s*184,\s*232/i);
   });
 
-  test('cloud fill color #FFB347 is defined in the page styles', async ({ page }) => {
-    // Requirement (Issue #54): the peach orange color must be present in the stylesheet.
-    // CSS encodes it as rgba(255,179,71,...) which is the RGB equivalent of #FFB347.
+  test('cloud fill color #FFB347 is defined in the page styles and lavender is absent', async ({ page }) => {
+    // Requirement (FTM-VT-008 / Issue #54): the peach orange color must be present in the
+    // stylesheet and the reverted lavender color must not be present in cloud rules.
     // Scoped to stylesheet cssRules only — does NOT fall back to a whole-document
     // innerHTML scan, which would pass even if the cloud code were deleted.
-    const colorDefined = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
+      let peachFound = false;
+      let lavenderInCloudRule = false;
       for (const sheet of sheets) {
         try {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
-            if (rule.cssText && (
+            if (!rule.cssText) continue;
+            if (
               rule.cssText.includes('FFB347') ||
               rule.cssText.includes('ffb347') ||
               rule.cssText.includes('rgba(255,179,71') ||
               rule.cssText.includes('rgba(255, 179, 71')
-            )) return true;
+            ) peachFound = true;
+            // Check if a cloud-related rule still references lavender
+            if (
+              (rule.cssText.includes('.cloud') || rule.cssText.includes('#clouds')) &&
+              (rule.cssText.includes('201,184,232') || rule.cssText.includes('201, 184, 232') ||
+               rule.cssText.includes('c9b8e8') || rule.cssText.includes('C9B8E8'))
+            ) lavenderInCloudRule = true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
-      return false;
+      return { peachFound, lavenderInCloudRule };
     });
-    expect(colorDefined).toBe(true);
+    expect(result.peachFound).toBe(true);
+    expect(result.lavenderInCloudRule).toBe(false);
   });
 
   test('cloud animation is present in the daytime theme', async ({ page }) => {
