@@ -1,7 +1,7 @@
 ## SDLC Session 2: Code Implementation
 
 ## Summary
-Reverts the daytime cloud fill color from sage green (rgba(168,213,162,0.7) / #a8d5a2) back to lavender (rgba(201,184,232,0.7) / #c9b8e8) per Issue #49 and Amendment E. Two occurrences were updated: the CSS rule for the `.cloud` selector and the inline background styles set on the cloud bump elements created in `renderClouds()`. No other properties, selectors, or files were modified.
+Updated daytime animated cloud fill color from lavender (rgba(201,184,232)) to soft peach orange (rgba(255,179,71)) per FTM-VT-008 (Issue #54 / Amendment F). The change affects both the CSS .cloud background property and the two bump element background values in renderClouds(), with no changes to cloud shape, animation timing, opacity, blur, or any other property.
 
 ## Changes
 - Modified `index.html`
@@ -10,7 +10,7 @@ Reverts the daytime cloud fill color from sage green (rgba(168,213,162,0.7) / #a
 - Round 1: No defects found.
 
 ## Unit Tests
-- Maintenance: The code change is purely a CSS color value update in index.html (rgba(168,213,162,0.7) → rgba(201,184,232,0.7)) with no changes to any logic in src/moonLogic.js. Unit tests cover pure JavaScript logic, not DOM or CSS, so no test changes are needed.
+- Maintenance: The code change only updates the cloud fill color in index.html (CSS background property on .cloud elements) — no logic in src/moonLogic.js was added, removed, or modified. Unit tests cover pure JS logic only, so no test changes are needed.
 - Result: All unit tests passed on first run.
 
 ## Review checklist
