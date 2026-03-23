@@ -358,3 +358,36 @@ This change is a test-maintenance fix: three duplicate Playwright describe block
 ### Verdict
 
 **PASS** — No security, privacy, or COPPA issues introduced. The three LOW findings are hardening recommendations for the CI scripting layer; none are exploitable in the production application. The two INFO items are test-coverage hygiene checks that should be confirmed before merge.
+
+
+## Security Review — Issue #49 (Cloud color revert: sage green → lavender)
+
+**Date:** 2026-03-14 
+**Reviewer:** Claude Sonnet 4.6 
+**Branch:** issue-49 
+**Scope:** `index.html` (CSS `.cloud` rule and `renderClouds()` inline styles), `FTM-SRS-001.md`, `traceability-matrix.txt`, `__tests_verify__/verification.spec.js`, `__tests_verify__/verification.test.js`, `.github/sdlc_pr_body.md`, `.github/sdlc_session1_delta.md`
+
+### Verdict: PASS
+
+No security, privacy, or COPPA issues introduced. The change is purely cosmetic: the daytime cloud fill color is reverted from `rgba(168,213,162,0.7)` (sage green) back to `rgba(201,184,232,0.7)` (lavender) in two locations in `index.html`. No JavaScript logic, no data-handling paths, no network calls, and no DOM-insertion patterns were altered.
+
+### Findings
+
+| Severity | Title |
+|---|---|
+| INFO | Change is purely cosmetic — no security-relevant logic modified |
+| INFO | No new external dependencies or CDN references introduced |
+| INFO | No XSS surface introduced |
+| INFO | COPPA and privacy posture unchanged |
+| INFO | Test scoping heuristic in getRenderCloudsFnBody() slightly fragile |
+| INFO | Three FTM-FR-031 unit tests removed without stated rationale |
+| INFO | Pre-existing MEDIUM findings (SRI, HTTP headers) remain open and unaffected |
+| INFO | SRS Version field not incremented to v1.5 |
+
+### Key security properties verified
+
+- **No XSS risk:** All modified style strings are static literals with no user-controlled input.
+- **No new external dependencies:** Existing SRI-protected SunCalc tag is untouched.
+- **COPPA compliance maintained:** No new data collection, network requests, or storage access introduced.
+- **No injection surface:** Color values are hardcoded string literals.
+- **Scope correctly limited:** Only the `.cloud` CSS rule and the two cloud bump inline styles in `renderClouds()` were modified, exactly as required by Issue #49.
