@@ -407,14 +407,31 @@ test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
     await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
   });
 
-  test('constellation labels for Orion, Cassiopeia, and Big Dipper are present at night', async ({ page }) => {
+  test('constellation labels for Orion, Cassiopeia, and Big Dipper are drawn on the canvas at night', async ({ page }) => {
     // Requirement: the night theme shall display constellation art with labels.
+    // Canvas fillText calls leave no DOM trace — inject a spy before page scripts run.
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const origFillText = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) {
+            window.__filledTexts.push(text);
+            return origFillText(text, ...rest);
+          };
+        }
+        return ctx;
+      };
+    });
     await setupAndEnterZip(page, SUNCALC_NIGHT);
-    const bodyContent = await page.locator('body').innerHTML();
-    // Labels must exist somewhere in the DOM (SVG text, canvas label, or HTML element)
-    const hasOrion = bodyContent.includes('Orion');
-    const hasCassiopeia = bodyContent.includes('Cassiopeia');
-    const hasBigDipper = bodyContent.includes('Big Dipper');
+    // Wait for animation frame(s) to fire
+    await page.waitForTimeout(500);
+    const filledTexts = await page.evaluate(() => window.__filledTexts || []);
+    const hasOrion = filledTexts.some(t => /orion/i.test(t));
+    const hasCassiopeia = filledTexts.some(t => /cassiopeia/i.test(t));
+    const hasBigDipper = filledTexts.some(t => /big dipper/i.test(t));
     expect(hasOrion).toBe(true);
     expect(hasCassiopeia).toBe(true);
     expect(hasBigDipper).toBe(true);
@@ -455,14 +472,30 @@ test.describe('[FTM-FR-032] Star field and constellation art rendered at night',
     await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
   });
 
-  test('constellation labels for Orion, Cassiopeia, and Big Dipper are present in the DOM or canvas layer', async ({ page }) => {
+  test('constellation labels for Orion, Cassiopeia, and Big Dipper are drawn on the canvas at night', async ({ page }) => {
     // Requirement: each constellation shall be labelled with its name.
-    const bodyText = await page.locator('body').innerHTML();
-    // Labels may be in SVG text, canvas aria-label, or hidden span — check page text content
-    const pageText = await page.evaluate(() => document.body.innerText + document.body.innerHTML);
-    expect(pageText).toMatch(/Orion/i);
-    expect(pageText).toMatch(/Cassiopeia/i);
-    expect(pageText).toMatch(/Big Dipper/i);
+    // Canvas fillText calls leave no DOM trace — spy on fillText via addInitScript.
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const origFillText = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) {
+            window.__filledTexts.push(text);
+            return origFillText(text, ...rest);
+          };
+        }
+        return ctx;
+      };
+    });
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await page.waitForTimeout(500);
+    const filledTexts = await page.evaluate(() => window.__filledTexts || []);
+    expect(filledTexts.some(t => /orion/i.test(t))).toBe(true);
+    expect(filledTexts.some(t => /cassiopeia/i.test(t))).toBe(true);
+    expect(filledTexts.some(t => /big dipper/i.test(t))).toBe(true);
   });
 
   test('constellation overlay element exists in the night theme', async ({ page }) => {
@@ -498,22 +531,65 @@ test.describe('[FTM-FR-032] Night theme — star field and constellation art', (
     await expect(canvas).toBeVisible();
   });
 
-  test('Orion constellation label is rendered in the night scene', async ({ page }) => {
+  test('Orion constellation label is drawn on canvas in the night scene', async ({ page }) => {
     // Requirement (Issue #35): Orion constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Oo]rion/);
+    // Canvas fillText is not reflected in innerHTML — spy via addInitScript.
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const orig = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) { window.__filledTexts.push(text); return orig(text, ...rest); };
+        }
+        return ctx;
+      };
+    });
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await page.waitForTimeout(500);
+    const texts = await page.evaluate(() => window.__filledTexts || []);
+    expect(texts.some(t => /orion/i.test(t))).toBe(true);
   });
 
-  test('Cassiopeia constellation label is rendered in the night scene', async ({ page }) => {
+  test('Cassiopeia constellation label is drawn on canvas in the night scene', async ({ page }) => {
     // Requirement (Issue #35): Cassiopeia constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Cc]assiopeia/);
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const orig = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) { window.__filledTexts.push(text); return orig(text, ...rest); };
+        }
+        return ctx;
+      };
+    });
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await page.waitForTimeout(500);
+    const texts = await page.evaluate(() => window.__filledTexts || []);
+    expect(texts.some(t => /cassiopeia/i.test(t))).toBe(true);
   });
 
-  test('Big Dipper constellation label is rendered in the night scene', async ({ page }) => {
+  test('Big Dipper constellation label is drawn on canvas in the night scene', async ({ page }) => {
     // Requirement (Issue #35): Big Dipper constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Bb]ig [Dd]ipper/);
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const orig = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) { window.__filledTexts.push(text); return orig(text, ...rest); };
+        }
+        return ctx;
+      };
+    });
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await page.waitForTimeout(500);
+    const texts = await page.evaluate(() => window.__filledTexts || []);
+    expect(texts.some(t => /big dipper/i.test(t))).toBe(true);
   });
 
   test('constellation canvas or SVG element is present in the night scene', async ({ page }) => {
@@ -544,13 +620,13 @@ test.describe('[FTM-FR-032] Night theme — star field and constellation art', (
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Day theme — sage green clouds
+// FTM-FR-033  Day theme — lavender clouds
 // Requirement: The system shall display animated clouds when the daytime theme
 //              is active.
-// Issue #37: cloud fill color changed to soft sage green #a8d5a2.
+// Issue #49: cloud fill color reverted to lavender #c9b8e8.
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
+test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page, SUNCALC_DAY);
   });
@@ -568,21 +644,21 @@ test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
     expect(cloudCount).toBeGreaterThan(0);
   });
 
-  test('cloud fill color is sage green (#a8d5a2) in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #37): cloud color must be #a8d5a2 (soft sage green).
-    // CSS uses rgba(168,213,162,0.7) — the rgba equivalent of #a8d5a2
+  test('cloud fill color is lavender (#c9b8e8) in the daytime theme', async ({ page }) => {
+    // Requirement (Issue #49): cloud color must be #c9b8e8 (lavender).
+    // CSS uses rgba(201,184,232,0.7) — the rgba equivalent of #c9b8e8
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
       if (!cloud) return null;
       const style = window.getComputedStyle(cloud);
       return style.backgroundColor || style.fill || null;
     });
-    expect(cloudColor).toMatch(/rgba?\(168,\s*213,\s*162/i);
+    expect(cloudColor).toMatch(/rgba?\(201,\s*184,\s*232/i);
   });
 
-  test('cloud fill color #a8d5a2 is defined in the page styles', async ({ page }) => {
-    // Requirement (Issue #37): the sage green color must be present in the stylesheet.
-    // CSS encodes it as rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
+  test('cloud fill color #c9b8e8 is defined in the page styles', async ({ page }) => {
+    // Requirement (Issue #49): the lavender color must be present in the stylesheet.
+    // CSS encodes it as rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8
     const colorDefined = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
       for (const sheet of sheets) {
@@ -590,15 +666,15 @@ test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
             if (rule.cssText && (
-              rule.cssText.includes('a8d5a2') ||
-              rule.cssText.includes('rgba(168,213,162') ||
-              rule.cssText.includes('rgba(168, 213, 162')
+              rule.cssText.includes('c9b8e8') ||
+              rule.cssText.includes('rgba(201,184,232') ||
+              rule.cssText.includes('rgba(201, 184, 232')
             )) return true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
       const html = document.documentElement.innerHTML;
-      return html.includes('a8d5a2') || html.includes('rgba(168,213,162') || html.includes('rgba(168, 213, 162');
+      return html.includes('c9b8e8') || html.includes('rgba(201,184,232') || html.includes('rgba(201, 184, 232');
     });
     expect(colorDefined).toBe(true);
   });
@@ -619,6 +695,26 @@ test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
   test('clouds are not visible in the nighttime theme', async ({ page }) => {
     // Requirement: clouds belong to the day theme only.
     await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await expect(page.locator('body')).toHaveClass(/night/);
+    const cloudCount = await page.evaluate(() =>
+      document.querySelectorAll('.cloud, [class*="cloud"]').length
+    );
+    expect(cloudCount).toBe(0);
+  });
+});HT);
+    await expect(page.locator('body')).toHaveClass(/night/);
+    // renderClouds(false) empties the container at night — no .cloud divs should exist
+    const cloudCount = await page.locator('.cloud').count();
+    expect(cloudCount).toBe(0);
+  });
+});HT);
+    await expect(page.locator('body')).toHaveClass(/night/);
+    const cloudCount = await page.evaluate(() =>
+      document.querySelectorAll('.cloud, [class*="cloud"]').length
+    );
+    expect(cloudCount).toBe(0);
+  });
+});HT);
     await expect(page.locator('body')).toHaveClass(/night/);
     // renderClouds(false) empties the container at night — no .cloud divs should exist
     const cloudCount = await page.locator('.cloud').count();
