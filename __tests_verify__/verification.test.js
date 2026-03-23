@@ -428,7 +428,7 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
 //              also carry crossorigin="anonymous".
 // Requirement FTM-SC-004: The SunCalc.js library shall continue to load and execute.
 // ═══════════════════════════════════════════════════════════════════════════════
-describe('[FTM-SC-001/002/003] SRI integrity and crossorigin attributes on external scripts', () => {
+describe('SRI integrity and crossorigin attributes on external scripts (combined FTM-SC-001/002/003)', () => {
   const fs = require('fs');
   const path = require('path');
 

@@ -616,15 +616,20 @@ pw_passed, pw_output = run_fix_loop(
 # ID more than once. Fail the session if duplicates are found.
 
 def find_duplicate_test_ids(*paths):
+    """Return IDs that appear more than once within the same file.
+    Cross-file duplicates (one in test.js, one in spec.js) are intentional
+    layered testing and are NOT flagged."""
     from collections import Counter
     id_re = re.compile(r'\[FTM-[A-Z]+-\d+\]')
-    counts = Counter()
+    duplicates = set()
     for path in paths:
+        counts = Counter()
         for line in read_file(path).splitlines():
             if 'test.describe(' in line or 'describe(' in line:
                 for req_id in id_re.findall(line):
                     counts[req_id] += 1
-    return sorted(req_id for req_id, n in counts.items() if n > 1)
+        duplicates.update(req_id for req_id, n in counts.items() if n > 1)
+    return sorted(duplicates)
 
 duplicate_ids = find_duplicate_test_ids(
     '__tests_verify__/verification.test.js',

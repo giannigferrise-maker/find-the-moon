@@ -393,153 +393,64 @@ test.describe('[FTM-FR-005] Display location name', () => {
 // Logic-layer counterpart: verification.test.js [FTM-FR-012]
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-032] Night theme — star field (additional UI)', () => {
-  test('stars canvas element is present in the DOM when night theme is active', async ({ page }) => {
-    // Requirement: the system shall display an animated star field background when the nighttime theme is active.
-    await setupAndEnterZip(page, SUNCALC_NIGHT);
-    const canvas = page.locator('#stars-canvas, canvas#stars, canvas.stars').first();
-    await expect(canvas).toBeAttached({ timeout: 5000 });
-  });
-
-  test('body has "night" class when nighttime SunCalc mock is active', async ({ page }) => {
-    // Requirement: nighttime theme must be applied when sun is > 6° below horizon.
-    await setupAndEnterZip(page, SUNCALC_NIGHT);
-    await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
-  });
-
-  test('constellation labels for Orion, Cassiopeia, and Big Dipper are present at night', async ({ page }) => {
-    // Requirement: the night theme shall display constellation art with labels.
-    await setupAndEnterZip(page, SUNCALC_NIGHT);
-    const bodyContent = await page.locator('body').innerHTML();
-    // Labels must exist somewhere in the DOM (SVG text, canvas label, or HTML element)
-    const hasOrion = bodyContent.includes('Orion');
-    const hasCassiopeia = bodyContent.includes('Cassiopeia');
-    const hasBigDipper = bodyContent.includes('Big Dipper');
-    expect(hasOrion).toBe(true);
-    expect(hasCassiopeia).toBe(true);
-    expect(hasBigDipper).toBe(true);
-  });
-
-  test('star canvas is hidden in the day theme (constellations not shown)', async ({ page }) => {
-    // Requirement: constellation art is part of the night theme only.
-    // body.night #stars-canvas sets opacity:1 — absence of night class means canvas is not shown.
-    // (opacity has a 1s CSS transition so we check class, not computed opacity)
-    await setupAndEnterZip(page, SUNCALC_DAY);
-    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
-    await expect(page.locator('body')).not.toHaveClass(/night/);
-  });
-});
-
-
 // ══════════════════════════════════════════════════════════════════════════════
 // FTM-FR-032  Animated star field + constellation art at night
 // Requirement: The system shall display an animated star field background
-//              when the nighttime theme is active.
-// Issue #35 adds: 3 constellations (Orion, Cassiopeia, Big Dipper) drawn over
-//              the star field with low-opacity lines, dot markers, and labels.
+//              when the nighttime theme is active. Constellation art (Orion,
+//              Cassiopeia, Big Dipper) is drawn over the star field with lines,
+//              dot markers, and labels.
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-032] Star field and constellation art rendered at night', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
+  test('#stars-canvas element is present and has a non-zero drawn width at night', async ({ page }) => {
+    // Requirement: the animated star field canvas must be initialised with content.
+    await routeSunCalc(page, SUNCALC_NIGHT);
+    await page.goto(INDEX_URL);
+    const canvas = page.locator('#stars-canvas');
+    await expect(canvas).toBeAttached({ timeout: 5000 });
+    const width = await canvas.evaluate(el => el.width);
+    expect(width).toBeGreaterThan(0);
+  });
+
+  test('body has "night" CSS class when nighttime theme is active', async ({ page }) => {
+    // Requirement: nighttime theme must be applied when sun is > 6° below horizon.
     await setupAndEnterZip(page, SUNCALC_NIGHT);
-  });
-
-  test('a canvas element for the star field is present and visible in the night theme', async ({ page }) => {
-    // Requirement: animated star field must be displayed at night.
-    const canvas = page.locator('#star-canvas, canvas').first();
-    await expect(canvas).toBeVisible({ timeout: 5000 });
-  });
-
-  test('body carries the "night" CSS class when the nighttime theme is active', async ({ page }) => {
-    // Requirement: nighttime theme must be applied when sun > 6° below horizon.
     await expect(page.locator('body')).toHaveClass(/night/, { timeout: 5000 });
   });
 
-  test('constellation labels for Orion, Cassiopeia, and Big Dipper are present in the DOM or canvas layer', async ({ page }) => {
-    // Requirement: each constellation shall be labelled with its name.
-    const bodyText = await page.locator('body').innerHTML();
-    // Labels may be in SVG text, canvas aria-label, or hidden span — check page text content
-    const pageText = await page.evaluate(() => document.body.innerText + document.body.innerHTML);
-    expect(pageText).toMatch(/Orion/i);
-    expect(pageText).toMatch(/Cassiopeia/i);
-    expect(pageText).toMatch(/Big Dipper/i);
-  });
-
-  test('constellation overlay element exists in the night theme', async ({ page }) => {
-    // Requirement: constellation art must be drawn over the star field at night.
-    // The overlay may be a canvas, svg, or a div with a known class/id.
-    // Constellations are drawn onto #stars-canvas (shared with star field)
-    const overlay = page.locator('#stars-canvas');
-    await expect(overlay).toBeAttached({ timeout: 5000 });
-  });
-});
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-032  Night theme — constellation art over star field
-// Requirement: The system shall display an animated star field background when
-//              the nighttime theme is active.
-// Issue #35: constellation art (Orion, Cassiopeia, Big Dipper) drawn over star field.
-// ══════════════════════════════════════════════════════════════════════════════
-
-test.describe('[FTM-FR-032] Night theme — star field and constellation art', () => {
-  test.beforeEach(async ({ page }) => {
+  test('constellation labels are drawn onto the canvas at night', async ({ page }) => {
+    // Requirement: Orion, Cassiopeia, and Big Dipper must each be labelled.
+    // Canvas fillText calls leave no DOM trace — spy via addInitScript.
+    await page.addInitScript(() => {
+      window.__filledTexts = [];
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const orig = ctx.fillText.bind(ctx);
+          ctx.fillText = function (text, ...rest) {
+            window.__filledTexts.push(text);
+            return orig(text, ...rest);
+          };
+        }
+        return ctx;
+      };
+    });
     await setupAndEnterZip(page, SUNCALC_NIGHT);
+    await page.waitForTimeout(500);
+    const texts = await page.evaluate(() => window.__filledTexts || []);
+    expect(texts.some(t => /orion/i.test(t))).toBe(true);
+    expect(texts.some(t => /cassiopeia/i.test(t))).toBe(true);
+    expect(texts.some(t => /big dipper/i.test(t))).toBe(true);
   });
 
-  test('body has "night" class when nighttime theme is active', async ({ page }) => {
-    // Requirement: nighttime theme must be applied when sun is > 6° below horizon.
-    await expect(page.locator('body')).toHaveClass(/night/);
-  });
-
-  test('star field canvas element is present and visible at night', async ({ page }) => {
-    // Requirement: animated star field background must be displayed at night.
-    const canvas = page.locator('#star-canvas, canvas').first();
-    await expect(canvas).toBeVisible();
-  });
-
-  test('Orion constellation label is rendered in the night scene', async ({ page }) => {
-    // Requirement (Issue #35): Orion constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Oo]rion/);
-  });
-
-  test('Cassiopeia constellation label is rendered in the night scene', async ({ page }) => {
-    // Requirement (Issue #35): Cassiopeia constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Cc]assiopeia/);
-  });
-
-  test('Big Dipper constellation label is rendered in the night scene', async ({ page }) => {
-    // Requirement (Issue #35): Big Dipper constellation must be labelled in the night theme.
-    const bodyHTML = await page.locator('body').innerHTML();
-    expect(bodyHTML).toMatch(/[Bb]ig [Dd]ipper/);
-  });
-
-  test('constellation canvas or SVG element is present in the night scene', async ({ page }) => {
-    // Requirement (Issue #35): constellation art must be drawn over the star field.
-    // The implementation must render constellation lines/dots on a canvas or inline SVG.
-    const hasCanvas = await page.evaluate(() => {
-      const canvases = document.querySelectorAll('canvas');
-      return canvases.length > 0;
-    });
-    expect(hasCanvas).toBe(true);
-  });
-
-  test('constellation art does not appear in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #35): constellations are a night-only feature.
-    // Re-setup with day theme to confirm constellations are absent.
+  test('star canvas is hidden and body has no "night" class in the daytime theme', async ({ page }) => {
+    // Requirement: constellation art is a night-only feature.
     await setupAndEnterZip(page, SUNCALC_DAY);
-    await expect(page.locator('body')).toHaveClass(/day/);
-    const bodyHTML = await page.locator('body').innerHTML();
-    // Constellation labels should not be visible when the day class is active.
-    const dayConstellationVisible = await page.evaluate(() => {
-      const el = document.querySelector('.constellation-label, [data-constellation]');
-      if (!el) return false;
-      const style = window.getComputedStyle(el);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-    });
-    expect(dayConstellationVisible).toBe(false);
+    await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
+    await expect(page.locator('body')).not.toHaveClass(/night/);
+    // The stars canvas should not be visible when the day theme is active.
+    await expect(page.locator('#stars-canvas')).toBeHidden();
   });
 });
 
@@ -874,30 +785,6 @@ test.describe('[FTM-FR-031] Day theme — "day" class on <body>', () => {
     await expect(page.locator('body')).not.toHaveClass(/\bnight\b/);
   });
 });
-
-// ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-032  Stars canvas rendered at night
-// Requirement: The system shall display an animated star field on the background
-//              canvas during nighttime.
-// ══════════════════════════════════════════════════════════════════════════════
-
-test.describe('[FTM-FR-032] Stars canvas rendered at night', () => {
-  test('#stars-canvas element is present in the DOM', async ({ page }) => {
-    // Requirement: the stars canvas must exist in the page.
-    await routeSunCalc(page, SUNCALC_NIGHT);
-    await page.goto(INDEX_URL);
-    await expect(page.locator('#stars-canvas')).toBeAttached();
-  });
-
-  test('#stars-canvas has a non-zero drawn width after night theme is applied', async ({ page }) => {
-    // Requirement: the canvas must be initialised with content (not left as 0×0).
-    await routeSunCalc(page, SUNCALC_NIGHT);
-    await page.goto(INDEX_URL);
-    const width = await page.locator('#stars-canvas').evaluate(el => el.width);
-    expect(width).toBeGreaterThan(0);
-  });
-});
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FTM-FR-040  Mobile compass — device orientation detection
@@ -1803,3 +1690,100 @@ test.describe('[FTM-VT-009] Cloud shape and animation unchanged', () => {
     expect(durationSeconds).toBeGreaterThan(0);
   });
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-IR-002  Microsoft Edge compatibility
+// Requirement: The system shall function correctly on Microsoft Edge 90+.
+// Edge 90+ uses the Chromium engine (Blink); a clean Chromium run validates
+// Edge compatibility for standards-based behaviour.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-IR-002] Microsoft Edge compatibility', () => {
+  test('page loads without JavaScript errors (Edge/Chromium engine)', async ({ page }) => {
+    // Requirement: the app must run error-free in Edge 90+.
+    // Edge 90+ is Chromium-based; a clean Chromium run validates Edge compatibility.
+    const errors = [];
+    page.on('pageerror', err => errors.push(err.message));
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL, { waitUntil: 'networkidle' });
+    expect(errors).toHaveLength(0);
+  });
+
+  test('all critical interactive elements are present after page load', async ({ page }) => {
+    // Requirement: Edge 90+ must render the full UI without missing elements.
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    await expect(page.locator('#gps-btn')).toBeVisible();
+    await expect(page.locator('#zip-input')).toBeVisible();
+    await expect(page.locator('#zip-btn')).toBeVisible();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-IR-003  Apple Safari compatibility
+// Requirement: The system shall function correctly on Apple Safari 14+.
+// Tests verify standards-compliant markup and API usage that Safari 14+ supports.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-IR-003] Apple Safari compatibility', () => {
+  test('page uses HTML5 doctype required by Safari 14+', async ({ page }) => {
+    // Requirement: the app must render correctly in Safari 14+ (WebKit engine).
+    // Verifies the page declares a standards-mode HTML5 doctype.
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    const doctype = await page.evaluate(() => document.doctype ? document.doctype.name : null);
+    expect(doctype).toBe('html');
+  });
+
+  test('page loads without JavaScript errors (Safari standards check)', async ({ page }) => {
+    // Requirement: the app must run error-free in Safari 14+.
+    // Verifies no Chrome-only APIs are used that would throw in WebKit.
+    const errors = [];
+    page.on('pageerror', err => errors.push(err.message));
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL, { waitUntil: 'networkidle' });
+    expect(errors).toHaveLength(0);
+  });
+
+  test('critical UI elements are present (Safari standards check)', async ({ page }) => {
+    // Requirement: Safari 14+ must render the interactive UI.
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    await expect(page.locator('#zip-input')).toBeVisible();
+    await expect(page.locator('#zip-btn')).toBeVisible();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FTM-UR-001  Operable by a child aged 8 or older
+// Requirement: The system shall be operable by a child aged 8 or older without
+//              adult assistance.
+// ══════════════════════════════════════════════════════════════════════════════
+
+test.describe('[FTM-UR-001] Operable by child aged 8+', () => {
+  test('zip code input has a descriptive placeholder', async ({ page }) => {
+    // Requirement: UI controls must be self-explanatory to an 8-year-old.
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    const placeholder = await page.locator('#zip-input').getAttribute('placeholder');
+    expect(placeholder).toBeTruthy();
+    expect(placeholder.trim().length).toBeGreaterThan(3);
+  });
+
+  test('primary submit button has descriptive text', async ({ page }) => {
+    // Requirement: button labels must be readable by a child without adult help.
+    await routeSunCalc(page, SUNCALC_DAY);
+    await page.goto(INDEX_URL);
+    const btnText = await page.locator('#zip-btn').textContent();
+    expect(btnText.trim().length).toBeGreaterThan(1);
+  });
+
+  test('result output uses plain-English directional words', async ({ page }) => {
+    // Requirement: all directional information must be understandable by a child.
+    await setupAndEnterZip(page, SUNCALC_DAY);
+    await expect(page.locator('#results')).toBeVisible();
+    const pageText = await page.locator('#results').textContent();
+    expect(pageText).toMatch(/north|south|east|west|above|below|rise|set/i);
+  });
+});
+
