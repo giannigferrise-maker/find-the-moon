@@ -272,8 +272,10 @@ test.describe('[FTM-FR-001] GPS location detection', () => {
 
   test('results panel becomes visible after a successful GPS fix', async ({ page }) => {
     // Requirement: moon data must be shown once a GPS location is received.
+    // Timeout is generous: after the GPS mock fires, the app may make a network
+    // call to reverse-geocode the coordinates before rendering #results.
     await page.click('#gps-btn');
-    await expect(page.locator('#results')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#results')).toBeVisible({ timeout: 10000 });
   });
 
   test('status shows a detecting message immediately after clicking the GPS button', async ({ page }) => {
@@ -404,8 +406,8 @@ test.describe('[FTM-FR-005] Display location name', () => {
 test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
   test('#stars-canvas element is present and has a non-zero drawn width at night', async ({ page }) => {
     // Requirement: the animated star field canvas must be initialised with content.
-    await routeSunCalc(page, SUNCALC_NIGHT);
-    await page.goto(INDEX_URL);
+    // Use setupAndEnterZip so the app has a location and initialises the canvas.
+    await setupAndEnterZip(page, SUNCALC_NIGHT);
     const canvas = page.locator('#stars-canvas');
     await expect(canvas).toBeAttached({ timeout: 5000 });
     const width = await canvas.evaluate(el => el.width);
@@ -444,13 +446,16 @@ test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
     expect(texts.some(t => /big dipper/i.test(t))).toBe(true);
   });
 
-  test('star canvas is hidden and body has no "night" class in the daytime theme', async ({ page }) => {
+  test('star canvas has opacity 0 and body has no "night" class in the daytime theme', async ({ page }) => {
     // Requirement: constellation art is a night-only feature.
+    // #stars-canvas uses opacity:0 (not display:none) to hide — check computed opacity.
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
     await expect(page.locator('body')).not.toHaveClass(/night/);
-    // The stars canvas should not be visible when the day theme is active.
-    await expect(page.locator('#stars-canvas')).toBeHidden();
+    const opacity = await page.locator('#stars-canvas').evaluate(
+      el => window.getComputedStyle(el).opacity
+    );
+    expect(parseFloat(opacity)).toBe(0);
   });
 });
 
