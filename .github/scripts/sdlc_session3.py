@@ -229,8 +229,9 @@ HOW TO READ THE DELTA — five sections, five actions:
 2. "Updated requirements in-place" → These requirement IDs ARE in the already-covered list above. \
    Do NOT write new test blocks for them. Instead, return string replacements in `test_updates` \
    that update the expected values in the EXISTING test blocks to match the new values in the delta. \
-   Also append an update note to `traceability_entries` documenting the change (e.g. \
-   "FTM-XX-NNN: updated expected value from X to Y per issue #N"). \
+   Also update the existing VTM entry in-place using `vtm_updates` — find the structured \
+   entry for that requirement ID and replace the stale fields (expected value, test description, \
+   etc.) with the new values. Do NOT append a note; edit the canonical entry directly. \
    Exception: if an updated requirement ID is NOT in the already-covered list, it has no existing \
    test. Treat it like section 1 (New requirements) and write a new test block instead.
 
@@ -240,7 +241,8 @@ HOW TO READ THE DELTA — five sections, five actions:
    deleted requirement has a describe block in either file, return a test_updates entry for \
    each file. For old_string, capture the ENTIRE describe block from its opening line through \
    its closing brace — the "minimum replacement" guideline does not apply here. \
-   Also note the deletion in `traceability_entries` as a removal.
+   Also remove the existing VTM entry using `vtm_updates` — use an empty string for \
+   new_string to delete the entire structured block for that requirement ID.
 
 4. "Violated requirements — defect fix" → These requirements already have tests. The code was \
    just fixed to comply. Do NOT modify those tests — they should now pass as-is. Return nothing \
@@ -283,7 +285,15 @@ Return ONLY a valid JSON object — no markdown fences, no preamble — with exa
 {{
   "jest_tests": "complete Jest test code to append for NEW requirements, or empty string",
   "playwright_tests": "complete Playwright test code to append for NEW requirements, or empty string",
-  "traceability_entries": "Content to append to the VTM. Three cases: (1) NEW requirement → append a full structured entry matching the format of existing VTM entries exactly; (2) UPDATED requirement → append a one-line note, e.g. 'UPDATE FTM-XX-NNN: expected value changed from X to Y (issue #N)'; (3) DELETED requirement → append a one-line note, e.g. 'REMOVED FTM-XX-NNN: requirement deleted (issue #N)'. Use empty string if nothing applies.",
+  "traceability_entries": "Content to append to the VTM for NEW requirements only — a full structured entry matching the format of existing VTM entries exactly. Use empty string if no new requirements.",
+  "vtm_updates": [
+    {{
+      "old_string": "exact verbatim text currently in traceability-matrix.txt (include enough context — 2–3 surrounding lines — to be unique)",
+      "new_string": "replacement text with corrected values",
+      "req_id": "FTM-XX-NNN",
+      "reason": "brief description of what changed"
+    }}
+  ],
   "test_updates": [
     {{
       "file": "__tests_verify__/verification.test.js or __tests_verify__/verification.spec.js",
@@ -330,9 +340,33 @@ else:
 
 if data.get('traceability_entries', '').strip():
     append_to_file('traceability-matrix.txt', data['traceability_entries'])
-    print("Updated traceability-matrix.txt")
+    print("Updated traceability-matrix.txt (new entries appended)")
 else:
     print("No new VTM entries to add.")
+
+# ── apply vtm_updates for CHANGED/DELETED requirements ───────────────────────
+# In-place edits to existing VTM entries so the canonical record stays correct.
+
+vtm_updates = data.get('vtm_updates', [])
+if vtm_updates:
+    applied_vtm_count = 0
+    for upd in vtm_updates:
+        old_string = upd.get('old_string', '')
+        new_string = upd.get('new_string', '')
+        req_id     = upd.get('req_id', '')
+        reason     = upd.get('reason', '')
+        if not old_string:
+            print(f"WARNING: Skipped vtm_update for {req_id} — missing old_string")
+            continue
+        try:
+            apply_fix_replacement('traceability-matrix.txt', old_string, new_string)
+            print(f"Updated VTM entry for {req_id}: {reason}")
+            applied_vtm_count += 1
+        except (ValueError, FileNotFoundError) as e:
+            print(f"WARNING: Skipped vtm_update for {req_id} — {e}")
+    print(f"Applied {applied_vtm_count}/{len(vtm_updates)} vtm_update(s).")
+else:
+    print("No existing VTM entries to update.")
 
 # ── apply test_updates for CHANGED requirements ───────────────────────────────
 # When an existing requirement was updated in-place (Enhancement-A2 or A3),
