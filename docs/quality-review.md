@@ -557,3 +557,80 @@ ISO 62304-inspired practice requires that changes to verification artifacts be t
 4. **Update the SRS document version field** from 1.4 to 1.5.
 5. **Populate the Amendment E date** in the SRS version history (replace 'date TBD').
 6. **Update the FTM-FR-033 Notes and Test Suite fields** in the traceability matrix to reference lavender and the renamed describe block.
+
+
+## Quality Review — Issue #49 (Cloud color revert: sage green → lavender) — Review Cycle 2
+
+**Date:** 2026-03-23  
+**Reviewer:** Quality Engineering (ISO 62304-adapted review)  
+**Branch:** issue-49  
+**Verdict:** FAIL — Blocking issues must be resolved before merge
+
+---
+
+### Summary
+
+This is the second quality review cycle for Issue #49. Several findings from the first review cycle (documented above) have been resolved: the FTM-VT-008 structured traceability entry has been corrected, the traceability matrix header has been updated to v1.5, the SRS version field has been incremented to v1.5, and the FTM-FR-033 matrix entry and test suite names have been updated. The core implementation in `index.html` remains correct and minimal.
+
+However, three blocking FAIL findings remain unresolved, all stemming from the same root cause: the undocumented deletion of three FTM-FR-031 unit tests from `verification.test.js`. These deletions are outside the scope of Issue #49, have no change request, no rationale, and create a traceability discrepancy in the FTM-FR-031 matrix entry.
+
+---
+
+### FAIL Findings
+
+| # | Activity | Title |
+|---|---|---|
+| F1 | Code Quality §5.5 | Three FTM-FR-031 unit tests deleted with no change request, rationale, or SRS change |
+| F2 | Test Coverage §5.6 | FTM-FR-031 test coverage reduced below documented level without authorization |
+| F3 | Traceability §5.7 | FTM-FR-031 traceability matrix Notes no longer match actual test coverage |
+
+**F1 — Three FTM-FR-031 unit tests deleted without rationale:**  
+The following tests were removed from `verification.test.js` with no corresponding change request, no SRS requirement change, and no documented justification:
+- `'identifies day when sun altitude is 0° (at the horizon)'`
+- `'identifies day when sun altitude is positive (sun above horizon)'`
+- `'returns false (day) for real noon UTC conditions in New York in summer'`
+
+Issue #49 restricts scope to the `.cloud` background color in `index.html`. These deletions are an undocumented scope deviation.
+
+**F2 — FTM-FR-031 test coverage reduced below documented level:**  
+The traceability matrix Notes for FTM-FR-031 state coverage at 0°, positive altitude, and real-noon integration scenarios. Those tests no longer exist in the test suite. The documented coverage claim is false.
+
+**F3 — FTM-FR-031 traceability matrix Notes inaccurate:**  
+The matrix Notes for FTM-FR-031 describe test scenarios that are not present in `verification.test.js` following the deletions. The matrix must be corrected to reflect actual coverage, or the tests must be restored.
+
+---
+
+### WARNING Findings
+
+| # | Activity | Title |
+|---|---|---|
+| W1 | Requirements Quality §5.2 | Amendment E date in SRS version history inconsistent with 'Last Updated' field |
+| W2 | Requirements Quality §5.2 | SRS Section 10 summary table does not include FTM-VT series row |
+| W3 | Test Coverage §5.6 | getRenderCloudsFnBody() scoping heuristic has edge-case fragility |
+| W4 | Traceability §5.7 | Traceability matrix 'Generated' date not updated to reflect Amendment E date |
+| W5 | Process Compliance §5.7 | Security review Reviewer field identifies AI model rather than human reviewer |
+
+---
+
+### PASS Findings
+
+- FTM-VT-008 SRS requirement updated correctly to lavender (#c9b8e8) — prior F2 resolved
+- Traceability matrix header updated to v1.5 — prior F3 resolved
+- SRS version field incremented to v1.5 — prior W1 resolved
+- FTM-VT-008 structured entry in Section 12 corrected — prior F2 resolved
+- FTM-FR-033 matrix Notes and Test Suite name updated to lavender — prior W4 resolved
+- Implementation in `index.html` correct and limited to three color substitutions
+- FTM-VT-008 Jest and Playwright tests updated correctly with improved scoping
+- Stylesheet scan fallback correctly tightened (returns false instead of innerHTML scan)
+- Security review completed and documented in `docs/security-review.md`
+- No XSS, COPPA, privacy, or injection concerns introduced
+
+---
+
+### Required Actions Before Merge
+
+1. **[BLOCKING] Restore the three deleted FTM-FR-031 unit tests** in `verification.test.js`, or file a separate change request with documented rationale for their removal and update the FTM-FR-031 traceability matrix Notes to reflect the reduced coverage.
+2. **[BLOCKING] Correct the FTM-FR-031 traceability matrix Notes** to accurately describe the tests that exist in the test file (whether the tests are restored or the deletions are formally accepted via a separate CR).
+3. **[RECOMMENDED] Update the SRS 'Last Updated' field** from March 14, 2026 to March 23, 2026 to match the Amendment E date.
+4. **[RECOMMENDED] Update the traceability matrix 'Generated' date** to match the Amendment E date.
+5. **[RECOMMENDED] Add a human reviewer sign-off** to the security review entry in `docs/security-review.md`.
