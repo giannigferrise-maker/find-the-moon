@@ -628,7 +628,7 @@ If there are no test authoring errors to fix, return:
         if passed:
             break
 
-    return passed, output
+    return passed, output, app_bugs_seen
 
 
 # ── syntax pre-check ─────────────────────────────────────────────────────────
@@ -659,7 +659,7 @@ print("\nRunning Jest tests...")
 if jest_rc is None:
     jest_rc, jest_output = run_command(
         'npx jest --config jest.verify.config.js --forceExit 2>&1')
-jest_passed, jest_output = run_fix_loop(
+jest_passed, jest_output, jest_app_bugs = run_fix_loop(
     'Jest', '__tests_verify__/verification.test.js',
     'npx jest --config jest.verify.config.js --forceExit 2>&1',
     jest_rc, jest_output)
@@ -669,11 +669,13 @@ if pw_rc is None:
     pw_rc, pw_output = run_command(
         'npx playwright test --config playwright.verify.config.js'
         ' __tests_verify__/verification.spec.js 2>&1')
-pw_passed, pw_output = run_fix_loop(
+pw_passed, pw_output, pw_app_bugs = run_fix_loop(
     'Playwright', '__tests_verify__/verification.spec.js',
     'npx playwright test --config playwright.verify.config.js'
     ' __tests_verify__/verification.spec.js 2>&1',
     pw_rc, pw_output)
+
+all_app_bugs = jest_app_bugs + pw_app_bugs
 
 # ── duplicate test-ID check ───────────────────────────────────────────────────
 # Scan both test files for describe blocks that reference the same requirement
@@ -778,6 +780,6 @@ with open('session3-summary.md', 'w') as f:
     f.write(summary_md)
 
 with open('session3-status.json', 'w') as f:
-    json.dump({'all_passed': all_passed}, f)
+    json.dump({'all_passed': all_passed, 'app_bugs': all_app_bugs}, f)
 
 print('\n' + summary_md)
