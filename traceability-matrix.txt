@@ -603,3 +603,6 @@ Notes       | Assert cloud element bounding box and CSS animation-name match
             | from the pre-amendment snapshot
 
 
+
+
+UPDATE FTM-VT-008: expected cloud fill color changed from sage green (#a8d5a2 / rgba(168,213,162,0.7)) to lavender (#c9b8e8 / rgba(201,184,232,0.7)) per Issue #49 (Amendment E).
