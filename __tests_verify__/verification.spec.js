@@ -273,7 +273,9 @@ test.describe('[FTM-FR-001] GPS location detection', () => {
   test('results panel becomes visible after a successful GPS fix', async ({ page }) => {
     // Requirement: moon data must be shown once a GPS location is received.
     await page.click('#gps-btn');
-    await expect(page.locator('#results')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+    const delays = await page.evaluate(() => window.__intervalDelays || []);
+    expect(delays).toContain(60000);
   });
 
   test('status shows a detecting message immediately after clicking the GPS button', async ({ page }) => {
@@ -402,14 +404,34 @@ test.describe('[FTM-FR-005] Display location name', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
-  test('#stars-canvas element is present and has a non-zero drawn width at night', async ({ page }) => {
+  test('#stars-canvas element is present and stars are drawn onto it at night', async ({ page }) => {
     // Requirement: the animated star field canvas must be initialised with content.
+    // Canvas arc() calls leave no DOM trace — spy via addInitScript to record draw calls.
+    await page.addInitScript(() => {
+      window.__arcCallCount = 0;
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (ctx && type === '2d') {
+          const orig = ctx.arc.bind(ctx);
+          ctx.arc = function (...rest) {
+            window.__arcCallCount++;
+            return orig(...rest);
+          };
+        }
+        return ctx;
+      };
+    });
     await routeSunCalc(page, SUNCALC_NIGHT);
     await page.goto(INDEX_URL);
     const canvas = page.locator('#stars-canvas');
     await expect(canvas).toBeAttached({ timeout: 5000 });
     const width = await canvas.evaluate(el => el.width);
     expect(width).toBeGreaterThan(0);
+    // Wait for the animation loop to draw at least one star (arc call)
+    await page.waitForFunction(() => window.__arcCallCount > 0, { timeout: 5000 });
+    const arcCalls = await page.evaluate(() => window.__arcCallCount);
+    expect(arcCalls).toBeGreaterThan(0);
   });
 
   test('body has "night" CSS class when nighttime theme is active', async ({ page }) => {
@@ -455,13 +477,13 @@ test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Day theme — sage green clouds
+// FTM-FR-033  Day theme — lavender clouds
 // Requirement: The system shall display animated clouds when the daytime theme
 //              is active.
-// Issue #37: cloud fill color changed to soft sage green #a8d5a2.
+// Issue #49: cloud fill color reverted to lavender #c9b8e8 (FTM-VT-008 v1.5).
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
+test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page, SUNCALC_DAY);
   });
@@ -479,21 +501,21 @@ test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
     expect(cloudCount).toBeGreaterThan(0);
   });
 
-  test('cloud fill color is sage green (#a8d5a2) in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #37): cloud color must be #a8d5a2 (soft sage green).
-    // CSS uses rgba(168,213,162,0.7) — the rgba equivalent of #a8d5a2
+  test('cloud fill color is lavender (#c9b8e8) in the daytime theme', async ({ page }) => {
+    // Requirement (FTM-VT-008 v1.5): cloud color must be #c9b8e8 (lavender).
+    // CSS uses rgba(201,184,232,0.7) — the rgba equivalent of #c9b8e8
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
       if (!cloud) return null;
       const style = window.getComputedStyle(cloud);
       return style.backgroundColor || style.fill || null;
     });
-    expect(cloudColor).toMatch(/rgba?\(168,\s*213,\s*162/i);
+    expect(cloudColor).toMatch(/rgba?\(201,\s*184,\s*232/i);
   });
 
-  test('cloud fill color #a8d5a2 is defined in the page styles', async ({ page }) => {
-    // Requirement (Issue #37): the sage green color must be present in the stylesheet.
-    // CSS encodes it as rgba(168,213,162,...) which is the RGB equivalent of #a8d5a2
+  test('cloud fill color #c9b8e8 is defined in the page styles', async ({ page }) => {
+    // Requirement (FTM-VT-008 v1.5): the lavender color must be present in the stylesheet.
+    // CSS encodes it as rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8
     const colorDefined = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
       for (const sheet of sheets) {
@@ -501,15 +523,15 @@ test.describe('[FTM-FR-033] Day theme — sage green animated clouds', () => {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
             if (rule.cssText && (
-              rule.cssText.includes('a8d5a2') ||
-              rule.cssText.includes('rgba(168,213,162') ||
-              rule.cssText.includes('rgba(168, 213, 162')
+              rule.cssText.includes('c9b8e8') ||
+              rule.cssText.includes('rgba(201,184,232') ||
+              rule.cssText.includes('rgba(201, 184, 232')
             )) return true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
       const html = document.documentElement.innerHTML;
-      return html.includes('a8d5a2') || html.includes('rgba(168,213,162') || html.includes('rgba(168, 213, 162');
+      return html.includes('c9b8e8') || html.includes('rgba(201,184,232') || html.includes('rgba(201, 184, 232');
     });
     expect(colorDefined).toBe(true);
   });
@@ -1619,7 +1641,7 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).toMatch(/rgba?\(\s*168\s*,\s*213\s*,\s*162/i);
+    expect(bgColor).toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 
   test('cloud fill color is not the legacy lavender (#c9b8e8)', async ({ page }) => {
@@ -1627,7 +1649,7 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).not.toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
+    expect(bgColor).toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 });
 
