@@ -80,8 +80,12 @@ def read_file(path, max_chars=None):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
-        if max_chars and len(content) > max_chars:
-            print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Consider raising the limit.")
+        if max_chars:
+            pct = len(content) / max_chars
+            if len(content) > max_chars:
+                print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Raise the limit.")
+            elif pct >= 0.9:
+                print(f"WARNING: {path} is {len(content)} chars — {int(pct*100)}% of the {max_chars} char limit. Consider raising the limit soon.")
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
@@ -162,10 +166,10 @@ issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_content          = read_file('FTM-SRS-001.md', max_chars=20000)
 srs_delta            = read_file('.github/sdlc_session1_delta.md', max_chars=8000)
-test_guide           = read_file('FTM-TEST-GUIDE.md', max_chars=8000)
-jest_tests           = read_file('__tests_verify__/verification.test.js', max_chars=30000)
-playwright_tests     = read_file('__tests_verify__/verification.spec.js', max_chars=30000)
-traceability_content = read_file('traceability-matrix.txt', max_chars=40000)
+test_guide           = read_file('FTM-TEST-GUIDE.md', max_chars=15000)
+jest_tests           = read_file('__tests_verify__/verification.test.js', max_chars=50000)
+playwright_tests     = read_file('__tests_verify__/verification.spec.js', max_chars=150000)
+traceability_content = read_file('traceability-matrix.txt', max_chars=45000)
 
 # Detect truncation so we can warn the model — a truncated test file means some existing
 # test blocks may not be visible even though their IDs appear in the already-covered list.
@@ -390,8 +394,8 @@ MAX_CRITIQUE_ROUNDS = 2
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
-    jest_after       = read_file('__tests_verify__/verification.test.js', max_chars=30000)
-    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=30000)
+    jest_after       = read_file('__tests_verify__/verification.test.js', max_chars=50000)
+    playwright_after = read_file('__tests_verify__/verification.spec.js', max_chars=150000)
 
     critique_prompt = f"""You are a senior test engineer reviewing freshly generated test code \
 for the "Find the Moon" web application.
@@ -530,7 +534,7 @@ def run_fix_loop(suite_label, test_file, run_cmd, rc, output):
 
     for fix_round in range(1, MAX_TEST_FIX_ROUNDS + 1):
         print(f"\n{suite_label} fix round {fix_round}...")
-        test_content = read_file(test_file, max_chars=30000)
+        test_content = read_file(test_file, max_chars=150000)
 
         fix_prompt = f"""You are a test engineer debugging a failing test suite for the \
 "Find the Moon" web application.

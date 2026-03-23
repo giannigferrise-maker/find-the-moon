@@ -54,8 +54,12 @@ def read_file(path, max_chars=None):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
-        if max_chars and len(content) > max_chars:
-            print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Consider raising the limit.")
+        if max_chars:
+            pct = len(content) / max_chars
+            if len(content) > max_chars:
+                print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Raise the limit.")
+            elif pct >= 0.9:
+                print(f"WARNING: {path} is {len(content)} chars — {int(pct*100)}% of the {max_chars} char limit. Consider raising the limit soon.")
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
@@ -83,7 +87,7 @@ issue_body   = os.environ.get('ISSUE_BODY', '') or '(no description provided)'
 
 srs_delta     = read_file('.github/sdlc_session1_delta.md')
 srs_content   = read_file('FTM-SRS-001.md', max_chars=20000)
-index_html    = read_file('index.html', max_chars=80000)
+index_html    = read_file('index.html', max_chars=90000)
 moon_logic_js = read_file('src/moonLogic.js', max_chars=15000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
@@ -233,7 +237,7 @@ critique_summaries  = []
 for round_num in range(1, MAX_CRITIQUE_ROUNDS + 1):
     print(f"\nSelf-critique round {round_num}...")
 
-    index_html_after    = read_file('index.html', max_chars=80000)
+    index_html_after    = read_file('index.html', max_chars=90000)
     moon_logic_js_after = read_file('src/moonLogic.js', max_chars=15000)
 
     # Format the replacements list so Claude knows exactly what changed
@@ -341,12 +345,12 @@ unit_test_summary = 'Not run (no code replacements were applied).'
 
 if replacements:
     unit_tests = {
-        '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=6000),
-        '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=6000),
-        '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=20000),
-        '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=6000),
-        '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=4000),
-        '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=6000),
+        '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=9000),
+        '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=13000),
+        '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=22000),
+        '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=10000),
+        '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=6000),
+        '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=9000),
     }
 
     unit_test_files_block = '\n\n'.join(
@@ -457,15 +461,15 @@ if not passed:
         print(f"\nTest fix round {fix_round}...")
 
         # Re-read all relevant files fresh from disk
-        index_html_current    = read_file('index.html', max_chars=80000)
+        index_html_current    = read_file('index.html', max_chars=90000)
         moon_logic_current    = read_file('src/moonLogic.js', max_chars=15000)
         unit_tests_current    = {
-            '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=5000),
-            '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=5000),
-            '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=20000),
-            '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=5000),
-            '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=3000),
-            '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=5000),
+            '__tests__/compass.test.js':      read_file('__tests__/compass.test.js',      max_chars=9000),
+            '__tests__/moonPhase.test.js':    read_file('__tests__/moonPhase.test.js',    max_chars=13000),
+            '__tests__/moonPosition.test.js': read_file('__tests__/moonPosition.test.js', max_chars=22000),
+            '__tests__/theme.test.js':        read_file('__tests__/theme.test.js',        max_chars=10000),
+            '__tests__/tilt.test.js':         read_file('__tests__/tilt.test.js',         max_chars=6000),
+            '__tests__/zipCode.test.js':      read_file('__tests__/zipCode.test.js',       max_chars=9000),
         }
         unit_tests_block = '\n\n'.join(
             f"--- {p} ---\n{c}" for p, c in unit_tests_current.items() if c

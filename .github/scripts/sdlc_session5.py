@@ -75,8 +75,12 @@ def read_file(path, max_chars=None):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
-        if max_chars and len(content) > max_chars:
-            print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Consider raising the limit.")
+        if max_chars:
+            pct = len(content) / max_chars
+            if len(content) > max_chars:
+                print(f"WARNING: {path} is {len(content)} chars but limit is {max_chars} — content truncated. Raise the limit.")
+            elif pct >= 0.9:
+                print(f"WARNING: {path} is {len(content)} chars — {int(pct*100)}% of the {max_chars} char limit. Consider raising the limit soon.")
         return content[:max_chars] if max_chars else content
     except FileNotFoundError:
         return ''
@@ -168,7 +172,7 @@ core_diff_content     = read_file('/tmp/core.diff', max_chars=30000)
 tests_jest_diff       = read_file('/tmp/tests_jest.diff', max_chars=10000)
 tests_spec_diff       = read_file('/tmp/tests_spec.diff', max_chars=40000)
 srs_content           = read_file('FTM-SRS-001.md', max_chars=20000)
-traceability_content  = read_file('traceability-matrix.txt', max_chars=40000)
+traceability_content  = read_file('traceability-matrix.txt', max_chars=45000)
 
 # ── prompt ────────────────────────────────────────────────────────────────────
 
