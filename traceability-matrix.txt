@@ -1,6 +1,6 @@
 ================================================================================
  FIND THE MOON — VERIFICATION TRACEABILITY MATRIX
- Document:  FTM-SRS-001 v1.4
+ Document:  FTM-SRS-001 v1.5
  Generated: 2026-03-14
 ================================================================================
 
@@ -197,9 +197,9 @@ Req ID      | FTM-FR-033
 Title       | Display cloud layer during daytime
 Method      | Test
 Test File   | __tests_verify__/verification.spec.js
-Test Suite  | [FTM-FR-033] Day theme — sage green animated clouds
+Test Suite  | [FTM-FR-033] Day theme — lavender animated clouds
 Notes       | Six tests: body.day class present, cloud count > 0 via querySelectorAll,
-            | cloud fill color rgba(168,213,162) via getComputedStyle, sage green color
+            | cloud fill color rgba(201,184,232) via getComputedStyle, lavender color
             | defined in stylesheet, animationName !== 'none', clouds absent at night
 
 ================================================================================
@@ -583,15 +583,15 @@ Notes       | Manual visual review: confirm constellation layer renders beneath
             | or at same z-level as star field without obscuring star animation
 
 Req ID      | FTM-VT-008
-Title       | Daytime cloud fill color is #a8d5a2 (soft sage green)
+Title       | Daytime cloud fill color is #c9b8e8 (lavender)
 Method      | Test
 Test File   | __tests_verify__/verification.test.js  (logic/config layer)
             | __tests_verify__/verification.spec.js   (UI layer)
 Test Suite  | [FTM-VT-008] Daytime cloud fill color (config)
             | [FTM-VT-008] Daytime cloud fill color (UI)
-Notes       | Config: assert index.html contains '#a8d5a2' or rgba(168,213,162)
+Notes       | Config: assert index.html contains '#c9b8e8' or rgba(201,184,232)
             | as the cloud fill color. UI: inspect computed fill of cloud element
-            | in day-theme context. Verify no legacy lavender (#c9b8e8) remains.
+            | in day-theme context. Verify no legacy sage green (#a8d5a2) remains.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed
@@ -601,5 +601,7 @@ Test Suite  | [FTM-VT-009] Cloud shape and animation unchanged
 Notes       | Assert cloud element bounding box and CSS animation-name match
             | baseline values; confirm only color-related CSS properties differ
             | from the pre-amendment snapshot
+
+
 
 

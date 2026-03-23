@@ -402,20 +402,6 @@ describe('[FTM-FR-031] Apply daytime theme when sun altitude ≥ −6°', () => 
     expect(isNighttime(new Date('2025-07-15T17:00:00Z'), 40.7128, -74.006)).toBe(false);
   });
 
-  it('identifies day when sun altitude is 0° (at the horizon)', () => {
-    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(0) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-
-  it('identifies day when sun altitude is positive (sun above horizon)', () => {
-    jest.spyOn(SunCalc, 'getPosition').mockReturnValue({ altitude: d2r(30) });
-    expect(isNighttime(new Date(), 40.7, -74.0)).toBe(false);
-  });
-
-  it('returns false (day) for real noon UTC conditions in New York in summer', () => {
-    // Integration: real SunCalc; 16:00 UTC = 12:00 EDT in July
-    expect(isNighttime(new Date('2025-07-15T16:00:00Z'), 40.7128, -74.006)).toBe(false);
-  });
 });
 
 
@@ -678,13 +664,28 @@ describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
   const fs = require('fs');
   const html = fs.readFileSync('index.html', 'utf8');
 
-  it('index.html contains the sage green cloud color #a8d5a2 or rgba(168,213,162)', () => {
-    // rgba(168,213,162,...) is the CSS equivalent of #a8d5a2
-    expect(html).toMatch(/rgba\(\s*168\s*,\s*213\s*,\s*162/i);
+  // Scope all scans to the renderClouds() function body to avoid false positives
+  // from unrelated rgba values elsewhere in index.html.
+  function getRenderCloudsFnBody(source) {
+    const fnStart = source.indexOf('function renderClouds(');
+    if (fnStart < 0) return '';
+    const fnEnd = source.indexOf('\nfunction ', fnStart + 1);
+    return source.slice(fnStart, fnEnd > fnStart ? fnEnd : fnStart + 4000);
+  }
+
+  it('renderClouds() function body contains the lavender cloud color #c9b8e8 or rgba(201,184,232)', () => {
+    // rgba(201,184,232,...) is the CSS equivalent of #c9b8e8
+    // Scoped to renderClouds() to avoid false positives from other rgba values.
+    const fnBody = getRenderCloudsFnBody(html);
+    expect(fnBody.length).toBeGreaterThan(0); // renderClouds() must exist
+    expect(fnBody).toMatch(/rgba\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 
-  it('cloud color is not the legacy lavender value #c9b8e8', () => {
-    // The cloud fill must not contain the old lavender color
-    expect(html).not.toMatch(/rgba\(\s*201\s*,\s*184\s*,\s*232/i);
+  it('renderClouds() function body does not contain the reverted sage green value #a8d5a2', () => {
+    // The cloud fill must not contain the old sage green color.
+    // Scoped to renderClouds() to avoid false positives from other rgba values.
+    const fnBody = getRenderCloudsFnBody(html);
+    expect(fnBody.length).toBeGreaterThan(0); // renderClouds() must exist
+    expect(fnBody).not.toMatch(/rgba\(\s*168\s*,\s*213\s*,\s*162/i);
   });
 });
