@@ -2,18 +2,34 @@
   "issue_number": "54",
   "trigger_label": "3-tests-ready",
   "entry_session": 3,
-  "phase": 1,
-  "start_time": "2026-03-23T22:26:20.914692Z",
+  "phase": 2,
+  "start_time": "2026-03-23T22:45:14.747117Z",
   "sessions_run": [
     {
       "session": 3,
       "attempt": 1,
       "verdict": "FAIL",
-      "elapsed_seconds": 179,
-      "timestamp": "2026-03-23T22:29:21.412187Z"
+      "elapsed_seconds": 21,
+      "timestamp": "2026-03-23T22:45:36.531571Z"
+    },
+    {
+      "session": 3,
+      "attempt": 2,
+      "verdict": "FAIL",
+      "elapsed_seconds": 2,
+      "timestamp": "2026-03-23T22:45:39.331706Z"
+    },
+    {
+      "session": 3,
+      "attempt": 3,
+      "verdict": "FAIL",
+      "elapsed_seconds": 2,
+      "timestamp": "2026-03-23T22:45:42.001504Z"
     }
   ],
-  "retry_counts": {},
+  "retry_counts": {
+    "3": 3
+  },
   "fixes_applied": [],
-  "final_verdict": "FAIL"
+  "final_verdict": "ESCALATED"
 }
