@@ -203,6 +203,7 @@ Notes       | Six tests: body.day class present, cloud count > 0 via querySelect
             | defined in stylesheet, animationName !== 'none', clouds absent at night.
             | Updated per Amendment F (Issue #54, SRS v1.6): color changed from
             | lavender (#c9b8e8) to soft peach orange (#FFB347 / rgba(255,179,71)).
+            | Existing tests already assert the new color value; no test block changes required.
 
 ================================================================================
  SECTION 5 — FUNCTIONAL REQUIREMENTS: MOBILE COMPASS
@@ -596,6 +597,8 @@ Notes       | Config: assert renderClouds() body in index.html contains rgba(255
             | rgba(201,184,232). UI: inspect computed backgroundColor of .cloud element
             | in day-theme context; assert rgba(255,179,71) present and rgba(201,184,232)
             | absent. Updated per Amendment F (Issue #54, SRS v1.6).
+            | No test block changes required for this update — existing tests already
+            | assert #FFB347 / rgba(255,179,71) as the expected value.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed
