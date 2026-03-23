@@ -479,3 +479,81 @@ Consolidate three duplicate Playwright `test.describe` blocks for FTM-FR-033 (an
 5. **[WARNING — Process]** Replace AI model name with a human reviewer name in the security review entry, or add a human sign-off line.
 6. **[WARNING — Process]** Clarify whether `.github/scripts/sdlc_session3.py` and `.github/scripts/sdlc_session5.py` were modified; if so, include them in the diff for review.
 7. **[WARNING — Traceability]** Update VTM Notes for FTM-FR-033 to enumerate all four coverage points once canonical block is confirmed.
+
+
+## Quality Review — Issue #49 (Cloud color revert: sage green → lavender)
+
+**Date:** 2026-03-14  
+**Reviewer:** Quality Engineering (ISO 62304-adapted review)  
+**Branch:** issue-49  
+**Verdict:** FAIL — Issues must be resolved before merge
+
+---
+
+### Summary
+
+Issue #49 requests a single cosmetic change: revert the daytime cloud fill color in `index.html` from sage green (`rgba(168,213,162,0.7)`) back to lavender (`rgba(201,184,232,0.7)`). The core implementation change in `index.html` is correct, minimal, and well-executed. However, four blocking or significant issues were identified that prevent merge approval.
+
+---
+
+### FAIL Findings
+
+| # | Activity | Title |
+|---|---|---|
+| F1 | Test Coverage §5.6 | Three FTM-FR-031 unit tests removed without documented rationale |
+| F2 | Traceability §5.7 | Traceability matrix FTM-VT-008 structured entry not updated — append-only note is insufficient |
+| F3 | Traceability §5.7 | Traceability matrix header still references SRS v1.4 instead of v1.5 |
+| F4 | Process Compliance §5.7 | Out-of-scope test deletions violate minimal-change principle and Issue #49 scope |
+
+**F1 — Three FTM-FR-031 unit tests removed without rationale:**  
+The following tests were deleted from `verification.test.js` with no justification, no SRS change, and no traceability entry:
+- `'identifies day when sun altitude is 0° (at the horizon)'`
+- `'identifies day when sun altitude is positive (sun above horizon)'`
+- `'returns false (day) for real noon UTC conditions in New York in summer'`
+
+These tests cover boundary and integration scenarios for FTM-FR-031 (daytime theme threshold). Issue #49 explicitly states the scope is limited to `.cloud` background color in `index.html`. Removing unrelated tests without a documented change request or rationale is a scope violation and reduces coverage of a functionally important threshold.
+
+**F2 — Traceability matrix FTM-VT-008 structured entry not updated:**  
+The Section 12 structured entry for FTM-VT-008 still describes sage green (`#a8d5a2 / rgba(168,213,162)`) as the required color and states "Verify no legacy lavender (#c9b8e8) remains" — which is now the opposite of the requirement. An UPDATE note appended to the bottom of the file is not a substitute for correcting the primary structured entry. Auditors reading the matrix will encounter contradictory information.
+
+**F3 — Traceability matrix version header not updated:**  
+The matrix header reads `FTM-SRS-001 v1.4`. With Amendment E in effect, this should read `v1.5`. The SRS document header also still reads Version 1.4. Both must be updated.
+
+**F4 — Out-of-scope changes violate minimal-change principle:**  
+ISO 62304-inspired practice requires that changes to verification artifacts be traceable to a corresponding requirement change. The three deleted FTM-FR-031 tests have no corresponding requirement change, no change request, and no documented rationale. This is an undocumented process deviation.
+
+---
+
+### WARNING Findings
+
+| # | Activity | Title |
+|---|---|---|
+| W1 | Requirements Quality §5.2 | SRS document version field not incremented to v1.5 |
+| W2 | Requirements Quality §5.2 | Amendment E 'date TBD' in version history |
+| W3 | Test Coverage §5.6 | CSS rule Playwright test fragility noted (stylesheet scan) |
+| W4 | Traceability §5.7 | FTM-FR-033 Notes and Test Suite name in matrix not updated |
+| W5 | Process Compliance §5.7 | Security review INFO finding (SRS version) not resolved before merge |
+
+---
+
+### PASS Findings
+
+- FTM-VT-008 SRS requirement updated correctly and unambiguously
+- Implementation change in `index.html` is correct, minimal, and limited to three color substitutions
+- No orphaned code changes; all modifications traceable to Issue #49
+- Jest FTM-VT-008 tests updated correctly with improved `getRenderCloudsFnBody()` scoping
+- Playwright FTM-VT-008 and FTM-FR-033 tests updated correctly
+- Stylesheet scan fallback correctly tightened (false return instead of innerHTML scan)
+- Security review completed and documented in `docs/security-review.md`
+- No XSS, COPPA, privacy, or injection concerns introduced
+
+---
+
+### Required Actions Before Merge
+
+1. **Restore the three deleted FTM-FR-031 unit tests** in `verification.test.js`, or provide a separate change request with documented rationale for their removal.
+2. **Update the FTM-VT-008 structured entry** in `traceability-matrix.txt` (Section 12) to reflect lavender (#c9b8e8 / rgba(201,184,232,0.7)) as the required color and remove the stale sage-green references.
+3. **Update the traceability matrix header** from `v1.4` to `v1.5`.
+4. **Update the SRS document version field** from 1.4 to 1.5.
+5. **Populate the Amendment E date** in the SRS version history (replace 'date TBD').
+6. **Update the FTM-FR-033 Notes and Test Suite fields** in the traceability matrix to reference lavender and the renamed describe block.
