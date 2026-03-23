@@ -593,18 +593,44 @@ If there are no test authoring errors to fix, return:
     return passed, output
 
 
+# ── syntax pre-check ─────────────────────────────────────────────────────────
+# Run `node --check` on both test files before Jest/Playwright. A syntax error
+# means the model corrupted the file — skip straight to the fix loop rather
+# than wasting a full test-suite run on unparseable JS.
+
+for _js_file in [
+    '__tests_verify__/verification.test.js',
+    '__tests_verify__/verification.spec.js',
+]:
+    _syn_rc, _syn_out = run_command(f'node --check {_js_file} 2>&1')
+    if _syn_rc != 0:
+        print(f"\n❌ SYNTAX ERROR in {_js_file} — skipping test run, going straight to fix loop:\n{_syn_out}")
+        # Inject a synthetic failure so the fix loop fires immediately
+        if _js_file.endswith('verification.test.js'):
+            jest_rc, jest_output = _syn_rc, f"Syntax error — node --check failed:\n{_syn_out}"
+        else:
+            pw_rc, pw_output = _syn_rc, f"Syntax error — node --check failed:\n{_syn_out}"
+    else:
+        print(f"✅ Syntax OK: {_js_file}")
+        if _js_file.endswith('verification.test.js'):
+            jest_rc = jest_output = None
+        else:
+            pw_rc = pw_output = None
+
 print("\nRunning Jest tests...")
-jest_rc, jest_output = run_command(
-    'npx jest --config jest.verify.config.js --forceExit 2>&1')
+if jest_rc is None:
+    jest_rc, jest_output = run_command(
+        'npx jest --config jest.verify.config.js --forceExit 2>&1')
 jest_passed, jest_output = run_fix_loop(
     'Jest', '__tests_verify__/verification.test.js',
     'npx jest --config jest.verify.config.js --forceExit 2>&1',
     jest_rc, jest_output)
 
 print("\nRunning Playwright tests...")
-pw_rc, pw_output = run_command(
-    'npx playwright test --config playwright.verify.config.js'
-    ' __tests_verify__/verification.spec.js 2>&1')
+if pw_rc is None:
+    pw_rc, pw_output = run_command(
+        'npx playwright test --config playwright.verify.config.js'
+        ' __tests_verify__/verification.spec.js 2>&1')
 pw_passed, pw_output = run_fix_loop(
     'Playwright', '__tests_verify__/verification.spec.js',
     'npx playwright test --config playwright.verify.config.js'
