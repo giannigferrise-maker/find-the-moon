@@ -600,8 +600,9 @@ Notes       | Config: assert renderClouds() body in index.html contains rgba(255
             | SRS v1.6) and does not contain the reverted lavender rgba(201,184,232).
             | UI: inspect computed backgroundColor of .cloud element in day-theme context;
             | assert rgba(255,179,71) present and rgba(201,184,232) absent.
-            | Expected values updated in-place from lavender rgba(201,184,232) to peach
-            | orange rgba(255,179,71) per Amendment F; no new test blocks were added.
+            | Expected values reflect Amendment F (Issue #54, SRS v1.6); no new test
+            | blocks were added. Section header comments in both test files updated
+            | from '#a8d5a2 (soft sage green)' to '#FFB347 (soft peach orange / rgba(255,179,71))'.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed

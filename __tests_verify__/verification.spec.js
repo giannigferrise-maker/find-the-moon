@@ -926,14 +926,28 @@ test.describe('[FTM-FR-042] iOS DeviceOrientationEvent.requestPermission() suppo
 // ══════════════════════════════════════════════════════════════════════════════
 
 test.describe('[FTM-FR-043] Live compass view shows moon direction', () => {
-  test('#compass-canvas element is present and has non-zero dimensions in the DOM', async ({ page }) => {
-    // Requirement: the canvas that draws the live compass must exist in the page
-    // and have a drawable area (non-zero width/height), confirming it is initialised
-    // for rendering rather than merely inserted as an empty placeholder.
+  test('#compass-canvas element is present, has non-zero dimensions, and draws moon direction arc', async ({ page }) => {
+    // Requirement: the canvas that draws the live compass must exist in the page,
+    // have a drawable area (non-zero width/height), AND actually draw the moon
+    // azimuth direction (arc calls confirm rendering, not just element presence).
     await page.addInitScript(() => {
+      window._compassArcCount = 0;
       Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {
         get() { return 5; }, configurable: true,
       });
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (type === '2d' && ctx && !ctx._compassSpied) {
+          ctx._compassSpied = true;
+          const origArc = ctx.arc.bind(ctx);
+          ctx.arc = (...a) => {
+            if (this.id === 'compass-canvas') window._compassArcCount++;
+            return origArc(...a);
+          };
+        }
+        return ctx;
+      };
     });
     await routeSunCalc(page, SUNCALC_DAY);
     await routeZipApi(page);
@@ -949,6 +963,11 @@ test.describe('[FTM-FR-043] Live compass view shows moon direction', () => {
     const height = await canvas.evaluate(el => el.height);
     expect(width).toBeGreaterThan(0);
     expect(height).toBeGreaterThan(0);
+    // Verify the compass canvas actually renders content (arc calls for the
+    // compass rose / moon direction indicator — presence alone is insufficient).
+    await page.waitForTimeout(300);
+    const arcCount = await page.evaluate(() => window._compassArcCount);
+    expect(arcCount).toBeGreaterThan(0);
   });
 
   test('#live-compass-wrap becomes visible after the user enables the live compass', async ({ page }) => {
