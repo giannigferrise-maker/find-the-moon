@@ -674,15 +674,15 @@ describe('[FTM-VT-008] Daytime cloud fill color (config)', () => {
   }
 
   it('renderClouds() function body contains the peach orange cloud color #FFB347 or rgba(255,179,71)', () => {
-    // rgba(255,179,71,...) is the CSS equivalent of #FFB347
+    // rgba(255,179,71,...) is the CSS equivalent of #FFB347 (soft peach orange / Amendment F)
     // Scoped to renderClouds() to avoid false positives from other rgba values.
     const fnBody = getRenderCloudsFnBody(html);
     expect(fnBody.length).toBeGreaterThan(0); // renderClouds() must exist
     expect(fnBody).toMatch(/rgba\(\s*255\s*,\s*179\s*,\s*71/i);
   });
 
-  it('renderClouds() function body does not contain the reverted lavender value #c9b8e8', () => {
-    // The cloud fill must not contain the old lavender color.
+  it('renderClouds() function body does not contain the reverted lavender value rgba(201,184,232)', () => {
+    // The cloud fill must not contain the old lavender color (rgba(201,184,232) / #c9b8e8).
     // Scoped to renderClouds() to avoid false positives from other rgba values.
     const fnBody = getRenderCloudsFnBody(html);
     expect(fnBody.length).toBeGreaterThan(0); // renderClouds() must exist

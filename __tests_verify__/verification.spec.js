@@ -485,7 +485,7 @@ test.describe('[FTM-FR-033] Day theme — peach orange animated clouds', () => {
   });
 
   test('cloud fill color is peach orange (#FFB347) in the daytime theme', async ({ page }) => {
-    // Requirement (FTM-VT-008 / Issue #54): cloud color must be #FFB347 (soft peach orange).
+    // Requirement (FTM-VT-008 / Issue #54 / Amendment F): cloud color must be #FFB347 (soft peach orange).
     // CSS uses rgba(255,179,71,...) — the rgba equivalent of #FFB347.
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
@@ -499,8 +499,8 @@ test.describe('[FTM-FR-033] Day theme — peach orange animated clouds', () => {
   });
 
   test('cloud fill color #FFB347 is defined in the page styles and lavender is absent', async ({ page }) => {
-    // Requirement (FTM-VT-008 / Issue #54): the peach orange color must be present in the
-    // stylesheet and the reverted lavender color must not be present in cloud rules.
+    // Requirement (FTM-VT-008 / Issue #54 / Amendment F): the peach orange color must be present
+    // in the stylesheet and the reverted lavender color must not be present in cloud rules.
     // Scoped to stylesheet cssRules only — does NOT fall back to a whole-document
     // innerHTML scan, which would pass even if the cloud code were deleted.
     const result = await page.evaluate(() => {
@@ -922,11 +922,29 @@ test.describe('[FTM-FR-042] iOS DeviceOrientationEvent.requestPermission() suppo
 // ══════════════════════════════════════════════════════════════════════════════
 
 test.describe('[FTM-FR-043] Live compass view shows moon direction', () => {
-  test('#compass-canvas element is present in the DOM', async ({ page }) => {
-    // Requirement: the canvas that draws the live compass must exist in the page.
+  test('#compass-canvas element is present and has non-zero dimensions in the DOM', async ({ page }) => {
+    // Requirement: the canvas that draws the live compass must exist in the page
+    // and have a drawable area (non-zero width/height), confirming it is initialised
+    // for rendering rather than merely inserted as an empty placeholder.
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {
+        get() { return 5; }, configurable: true,
+      });
+    });
     await routeSunCalc(page, SUNCALC_DAY);
+    await routeZipApi(page);
     await page.goto(INDEX_URL);
-    await expect(page.locator('#compass-canvas')).toBeAttached();
+    await page.fill('#zip-input', '10001');
+    await page.click('#zip-btn');
+    await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+    await page.click('#compass-toggle-btn');
+    await expect(page.locator('#live-compass-wrap')).toHaveClass(/\bvisible\b/, { timeout: 3000 });
+    const canvas = page.locator('#compass-canvas');
+    await expect(canvas).toBeAttached();
+    const width = await canvas.evaluate(el => el.width);
+    const height = await canvas.evaluate(el => el.height);
+    expect(width).toBeGreaterThan(0);
+    expect(height).toBeGreaterThan(0);
   });
 
   test('#live-compass-wrap becomes visible after the user enables the live compass', async ({ page }) => {
@@ -1632,7 +1650,7 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
   });
 
   test('cloud element computed fill color matches #FFB347 (soft peach orange)', async ({ page }) => {
-    // Requirement: cloud color is rgba(255, 179, 71, ...) — the rgba equivalent of #FFB347.
+    // Requirement (Amendment F / Issue #54): cloud color is rgba(255,179,71,...) — the rgba equivalent of #FFB347.
     // .cloud divs are dynamically created when the day theme is active.
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
@@ -1641,7 +1659,8 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
     expect(bgColor).toMatch(/rgba?\(\s*255\s*,\s*179\s*,\s*71/i);
   });
 
-  test('cloud fill color is not the reverted lavender (#c9b8e8)', async ({ page }) => {
+  test('cloud fill color is not the reverted lavender (#c9b8e8 / rgba(201,184,232))', async ({ page }) => {
+    // Amendment F replaced lavender with peach orange; this guards against regression.
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
