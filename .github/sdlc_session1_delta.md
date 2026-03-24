@@ -59,3 +59,11 @@ The primary Issue #54 change (cloud color to peach orange) is correct. The failu
 6. **Fix the identical stale section header comment in `verification.spec.js`** above the `[FTM-VT-008]` describe block: same replacement as above.
 
 After these changes the PR should contain ONLY the Issue #54 cloud color change and its directly associated SRS/VTM/test updates. No other functional or cosmetic changes should remain.
+
+
+## Orchestrator — App Bug Report (Session 3 Failure)
+Session 3 tests identified the following app bugs that must be fixed in the implementation. The tests are correct — the code is wrong.
+
+- FTM-FR-033 / FTM-VT-008: The cloud fill color in the app's stylesheet has not been updated from lavender (#c9b8e8 / rgb(201,184,232)) to peach orange (#FFB347 / rgba(255,179,71)). The test scans cssRules for the presence of FFB347 or rgba(255,179,71) and finds neither, causing peachFound=false. The app's CSS (in index.html or an associated stylesheet) must replace the lavender cloud fill color with #FFB347 per the Issue #54 / Amendment F requirement change to FTM-VT-008.
+
+Fix these issues in index.html or src/moonLogic.js. Do not modify the test files.
