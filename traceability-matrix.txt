@@ -201,9 +201,9 @@ Test Suite  | [FTM-FR-033] Day theme — peach orange animated clouds
 Notes       | Six tests: body.day class present, cloud count > 0 via querySelectorAll,
             | cloud fill color rgba(255,179,71) via getComputedStyle, peach orange color
             | defined in stylesheet, animationName !== 'none', clouds absent at night.
-            | Color updated from lavender (#c9b8e8) to soft peach orange #FFB347 /
-            | rgba(255,179,71) per Amendment F (Issue #54, SRS v1.6). Existing tests
-            | assert this value; no test block changes required.
+            | Cloud fill color is #FFB347 / rgba(255,179,71) (soft peach orange) per
+            | Amendment F (Issue #54, SRS v1.6). Tests assert this value; no test
+            | block changes were required for this amendment.
 
 ================================================================================
  SECTION 5 — FUNCTIONAL REQUIREMENTS: MOBILE COMPASS
@@ -596,9 +596,9 @@ Notes       | Config: assert renderClouds() body in index.html contains rgba(255
             | as the cloud fill color and does not contain the reverted lavender
             | rgba(201,184,232). UI: inspect computed backgroundColor of .cloud element
             | in day-theme context; assert rgba(255,179,71) present and rgba(201,184,232)
-            | absent. Requirement value updated from lavender (#c9b8e8) to soft peach
-            | orange (#FFB347 / rgba(255,179,71)) per Amendment F (Issue #54, SRS v1.6).
-            | Existing tests assert this value; no test block changes required.
+            | absent. Color is #FFB347 / rgba(255,179,71) (soft peach orange) per
+            | Amendment F (Issue #54, SRS v1.6). Tests assert this value; no test
+            | block changes were required for this amendment.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed
