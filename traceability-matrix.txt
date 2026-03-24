@@ -598,8 +598,8 @@ Notes       | Config: assert renderClouds() body in index.html contains rgba(255
             | rgba(201,184,232). UI: inspect computed backgroundColor of .cloud element
             | in day-theme context; assert rgba(255,179,71) present and rgba(201,184,232)
             | absent. Color is #FFB347 / rgba(255,179,71) (soft peach orange) per
-            | Amendment F (Issue #54, SRS v1.6). Expected values updated in existing
-            | test blocks to reflect new color; no new test blocks were added.
+            | Amendment F (Issue #54, SRS v1.6). Expected values reflect the color
+            | introduced in Amendment F; no new test blocks were added.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed
