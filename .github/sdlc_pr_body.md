@@ -1,7 +1,7 @@
 ## SDLC Session 2: Code Implementation
 
 ## Summary
-Updated daytime animated cloud fill color from lavender (rgba(201,184,232)) to soft peach orange (rgba(255,179,71)) per FTM-VT-008 (Issue #54 / Amendment F). The change affects both the CSS .cloud background property and the two bump element background values in renderClouds(), with no changes to cloud shape, animation timing, opacity, blur, or any other property.
+Fixes FTM-FR-032 defect: explicitly sets #stars-canvas opacity via inline style in applyTheme() to ensure opacity is 0 when the daytime theme is active, overriding any residual CSS transition state that was causing the canvas to have opacity ~0.967 instead of 0. The cloud fill color change (FTM-VT-008, #FFB347) was already correctly implemented in the existing code as rgba(255,179,71,0.7).
 
 ## Changes
 - Modified `index.html`
@@ -10,7 +10,7 @@ Updated daytime animated cloud fill color from lavender (rgba(201,184,232)) to s
 - Round 1: No defects found.
 
 ## Unit Tests
-- Maintenance: The code change only updates the cloud fill color in index.html (CSS background property on .cloud elements) — no logic in src/moonLogic.js was added, removed, or modified. Unit tests cover pure JS logic only, so no test changes are needed.
+- Maintenance: The code changes are confined to index.html only: the cloud fill color constant was updated from lavender (#c9b8e8) to peach orange (#FFB347), and the applyTheme function was fixed to set starsCanvas opacity correctly. Neither change affects any exported function in src/moonLogic.js, so no unit test modifications are needed.
 - Result: All unit tests passed on first run.
 
 ## Review checklist

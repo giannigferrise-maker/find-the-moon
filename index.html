@@ -807,6 +807,7 @@ function isNighttime(date, lat, lon) {
 function applyTheme(isNight) {
   document.body.classList.toggle('night', isNight);
   document.body.classList.toggle('day', !isNight);
+  starsCanvas.style.opacity = isNight ? '1' : '0';
   if (isNight) drawStars(); else clearStars();
   renderClouds(!isNight);
 }
