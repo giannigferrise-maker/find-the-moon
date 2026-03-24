@@ -33,3 +33,11 @@ Issue #54 requests changing the daytime animated cloud fill color from lavender 
 ## Implementation guidance
 *(Session 2: apply this | Session 3: no test change needed)*
 In the daytime theme cloud-rendering code, locate all references to the cloud fill color and replace the lavender value with the new peach orange value. Specifically: (1) Any canvas fillStyle or CSS fill property set to '#c9b8e8' or 'rgb(201,184,232)' or 'lavender' used for cloud drawing should be changed to '#FFB347' or 'rgba(255,179,71,1)'. (2) If the color is defined as a named constant or CSS custom property (e.g. --cloud-color or CLOUD_FILL), update the constant/variable definition; do not scatter the hex value at each draw call. (3) No changes to cloud path geometry, animation timing, opacity, blur, or any other property — only the fill color changes. Both hex (#FFB347) and rgba (rgba(255,179,71,1)) forms are acceptable; use whichever form is consistent with the existing codebase style.
+
+
+## Orchestrator — App Bug Report (Session 3 Failure)
+Session 3 tests identified the following app bugs that must be fixed in the implementation. The tests are correct — the code is wrong.
+
+- [FTM-FR-032] star canvas has opacity 0 and body has no 'night' class in the daytime theme: the #stars-canvas element has computed opacity ~0.967 instead of 0 when the daytime theme is active (SUNCALC_DAY mock, sun altitude +0.5). The app should set opacity:0 on #stars-canvas when the day theme is applied, but it is not doing so correctly. This is not explained by any delta entry and is an app defect to be fixed in Session 2.
+
+Fix these issues in index.html or src/moonLogic.js. Do not modify the test files.
