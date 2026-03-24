@@ -41,3 +41,21 @@ Session 3 tests identified the following app bugs that must be fixed in the impl
 - [FTM-FR-032] star canvas has opacity 0 and body has no 'night' class in the daytime theme: the #stars-canvas element has computed opacity ~0.967 instead of 0 when the daytime theme is active (SUNCALC_DAY mock, sun altitude +0.5). The app should set opacity:0 on #stars-canvas when the day theme is applied, but it is not doing so correctly. This is not explained by any delta entry and is an app defect to be fixed in Session 2.
 
 Fix these issues in index.html or src/moonLogic.js. Do not modify the test files.
+
+
+## Orchestrator — Fix Guidance (Bundled out-of-scope changes + stale comments)
+The primary Issue #54 change (cloud color to peach orange) is correct. The failures are due to out-of-scope changes bundled into the same PR and stale comments in test files. Perform ALL of the following:
+
+1. **Revert the `starsCanvas.style.opacity` fix in `applyTheme()`.** This FTM-FR-032 change must not ship with Issue #54. Remove it from the PR entirely. (A separate issue will need to be opened for it later, but that is outside this session's scope.)
+
+2. **Revert the FTM-SC-001/002/003 TODO comment removals.** These are housekeeping changes out of Issue #54 scope. Restore the original TODO comments.
+
+3. **Revert the FTM-FR-011 assertion change** (`toBeCloseTo` → `toBeLessThan`) in the relevant test file(s). Restore the original `toBeCloseTo` assertion.
+
+4. **Revert the FTM-FR-043 test expansion** if it is not directly required by Issue #54. Restore the original test.
+
+5. **Fix the stale section header comment in `verification.test.js`** above the `[FTM-VT-008]` describe block: replace `#a8d5a2 (soft sage green)` with `#FFB347 (soft peach orange / rgba(255,179,71))`.
+
+6. **Fix the identical stale section header comment in `verification.spec.js`** above the `[FTM-VT-008]` describe block: same replacement as above.
+
+After these changes the PR should contain ONLY the Issue #54 cloud color change and its directly associated SRS/VTM/test updates. No other functional or cosmetic changes should remain.
