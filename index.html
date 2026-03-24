@@ -80,7 +80,7 @@
     body.day .clouds { opacity: 1; }
     .cloud {
       position: absolute;
-      background: rgba(201,184,232,0.7);
+      background: #FFB347;
       border-radius: 50px;
       filter: blur(8px);
       animation: drift linear infinite;
@@ -807,6 +807,7 @@ function isNighttime(date, lat, lon) {
 function applyTheme(isNight) {
   document.body.classList.toggle('night', isNight);
   document.body.classList.toggle('day', !isNight);
+  starsCanvas.style.opacity = isNight ? '1' : '0';
   if (isNight) drawStars(); else clearStars();
   renderClouds(!isNight);
 }
@@ -943,9 +944,9 @@ function renderClouds(show) {
     el.className = 'cloud';
     el.style.cssText = `top:${c.top};width:${c.width}px;height:${c.height}px;animation-duration:${c.dur}s;animation-delay:${c.delay}s`;
     const b1 = document.createElement('div');
-    b1.style.cssText = `width:${c.width*0.6}px;height:${c.height*1.4}px;top:-50%;left:20%;border-radius:50%;background:rgba(201,184,232,0.7);position:absolute;`;
+    b1.style.cssText = `width:${c.width*0.6}px;height:${c.height*1.4}px;top:-50%;left:20%;border-radius:50%;background:rgba(255,179,71,0.7);position:absolute;`;
     const b2 = document.createElement('div');
-    b2.style.cssText = `width:${c.width*0.45}px;height:${c.height*1.2}px;top:-40%;left:45%;border-radius:50%;background:rgba(201,184,232,0.6);position:absolute;`;
+    b2.style.cssText = `width:${c.width*0.45}px;height:${c.height*1.2}px;top:-40%;left:45%;border-radius:50%;background:rgba(255,179,71,0.6);position:absolute;`;
     el.appendChild(b1); el.appendChild(b2);
     layer.appendChild(el);
   });

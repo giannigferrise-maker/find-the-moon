@@ -449,9 +449,13 @@ test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
   test('star canvas has opacity 0 and body has no "night" class in the daytime theme', async ({ page }) => {
     // Requirement: constellation art is a night-only feature.
     // #stars-canvas uses opacity:0 (not display:none) to hide — check computed opacity.
+    // Defect fix (FTM-FR-032): app was not correctly setting opacity:0 on #stars-canvas
+    // when the day theme was active; this test guards against regression.
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
     await expect(page.locator('body')).not.toHaveClass(/night/);
+    // Wait for any CSS transition to settle before checking opacity
+    await page.waitForTimeout(1200);
     const opacity = await page.locator('#stars-canvas').evaluate(
       el => window.getComputedStyle(el).opacity
     );
@@ -460,13 +464,13 @@ test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FTM-FR-033  Day theme — sage green clouds
+// FTM-FR-033  Day theme — peach orange clouds
 // Requirement: The system shall display animated clouds when the daytime theme
 //              is active.
-// Issue #37: cloud fill color changed to soft sage green #a8d5a2.
+// Issue #54: cloud fill color changed to soft peach orange #FFB347.
 // ══════════════════════════════════════════════════════════════════════════════
 
-test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
+test.describe('[FTM-FR-033] Day theme — peach orange animated clouds', () => {
   test.beforeEach(async ({ page }) => {
     await setupAndEnterZip(page, SUNCALC_DAY);
   });
@@ -484,40 +488,53 @@ test.describe('[FTM-FR-033] Day theme — lavender animated clouds', () => {
     expect(cloudCount).toBeGreaterThan(0);
   });
 
-  test('cloud fill color is lavender (#c9b8e8) in the daytime theme', async ({ page }) => {
-    // Requirement (Issue #49): cloud color must be #c9b8e8 (lavender).
-    // CSS uses rgba(201,184,232,0.7) — the rgba equivalent of #c9b8e8
+  test('cloud fill color is peach orange (#FFB347) in the daytime theme', async ({ page }) => {
+    // Requirement (FTM-VT-008 / Issue #54 / Amendment F): cloud color must be #FFB347 (soft peach orange).
+    // CSS uses rgba(255,179,71,...) — the rgba equivalent of #FFB347.
     const cloudColor = await page.evaluate(() => {
       const cloud = document.querySelector('.cloud');
       if (!cloud) return null;
       const style = window.getComputedStyle(cloud);
       return style.backgroundColor || style.fill || null;
     });
-    expect(cloudColor).toMatch(/rgba?\(201,\s*184,\s*232/i);
+    expect(cloudColor).toMatch(/rgba?\(255,\s*179,\s*71/i);
+    // Must NOT be the reverted lavender color
+    expect(cloudColor).not.toMatch(/rgba?\(201,\s*184,\s*232/i);
   });
 
-  test('cloud fill color #c9b8e8 is defined in the page styles', async ({ page }) => {
-    // Requirement (Issue #49): the lavender color must be present in the stylesheet.
-    // CSS encodes it as rgba(201,184,232,...) which is the RGB equivalent of #c9b8e8.
+  test('cloud fill color #FFB347 is defined in the page styles and lavender is absent', async ({ page }) => {
+    // Requirement (FTM-VT-008 / Issue #54 / Amendment F): the peach orange color must be present
+    // in the stylesheet and the reverted lavender color must not be present in cloud rules.
     // Scoped to stylesheet cssRules only — does NOT fall back to a whole-document
     // innerHTML scan, which would pass even if the cloud code were deleted.
-    const colorDefined = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
       const sheets = Array.from(document.styleSheets);
+      let peachFound = false;
+      let lavenderInCloudRule = false;
       for (const sheet of sheets) {
         try {
           const rules = Array.from(sheet.cssRules || []);
           for (const rule of rules) {
-            if (rule.cssText && (
-              rule.cssText.includes('c9b8e8') ||
-              rule.cssText.includes('rgba(201,184,232') ||
-              rule.cssText.includes('rgba(201, 184, 232')
-            )) return true;
+            if (!rule.cssText) continue;
+            if (
+              rule.cssText.includes('FFB347') ||
+              rule.cssText.includes('ffb347') ||
+              rule.cssText.includes('rgba(255,179,71') ||
+              rule.cssText.includes('rgba(255, 179, 71')
+            ) peachFound = true;
+            // Check if a cloud-related rule still references lavender
+            if (
+              (rule.cssText.includes('.cloud') || rule.cssText.includes('#clouds')) &&
+              (rule.cssText.includes('201,184,232') || rule.cssText.includes('201, 184, 232') ||
+               rule.cssText.includes('c9b8e8') || rule.cssText.includes('C9B8E8'))
+            ) lavenderInCloudRule = true;
           }
         } catch (_) { /* cross-origin sheet */ }
       }
-      return false;
+      return { peachFound, lavenderInCloudRule };
     });
-    expect(colorDefined).toBe(true);
+    expect(result.peachFound).toBe(true);
+    expect(result.lavenderInCloudRule).toBe(false);
   });
 
   test('cloud animation is present in the daytime theme', async ({ page }) => {
@@ -909,11 +926,48 @@ test.describe('[FTM-FR-042] iOS DeviceOrientationEvent.requestPermission() suppo
 // ══════════════════════════════════════════════════════════════════════════════
 
 test.describe('[FTM-FR-043] Live compass view shows moon direction', () => {
-  test('#compass-canvas element is present in the DOM', async ({ page }) => {
-    // Requirement: the canvas that draws the live compass must exist in the page.
+  test('#compass-canvas element is present, has non-zero dimensions, and draws moon direction arc', async ({ page }) => {
+    // Requirement: the canvas that draws the live compass must exist in the page,
+    // have a drawable area (non-zero width/height), AND actually draw the moon
+    // azimuth direction (arc calls confirm rendering, not just element presence).
+    await page.addInitScript(() => {
+      window._compassArcCount = 0;
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {
+        get() { return 5; }, configurable: true,
+      });
+      const origGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+        const ctx = origGetContext.call(this, type, ...args);
+        if (type === '2d' && ctx && !ctx._compassSpied) {
+          ctx._compassSpied = true;
+          const origArc = ctx.arc.bind(ctx);
+          ctx.arc = (...a) => {
+            if (this.id === 'compass-canvas') window._compassArcCount++;
+            return origArc(...a);
+          };
+        }
+        return ctx;
+      };
+    });
     await routeSunCalc(page, SUNCALC_DAY);
+    await routeZipApi(page);
     await page.goto(INDEX_URL);
-    await expect(page.locator('#compass-canvas')).toBeAttached();
+    await page.fill('#zip-input', '10001');
+    await page.click('#zip-btn');
+    await expect(page.locator('#results')).toBeVisible({ timeout: 6000 });
+    await page.click('#compass-toggle-btn');
+    await expect(page.locator('#live-compass-wrap')).toHaveClass(/\bvisible\b/, { timeout: 3000 });
+    const canvas = page.locator('#compass-canvas');
+    await expect(canvas).toBeAttached();
+    const width = await canvas.evaluate(el => el.width);
+    const height = await canvas.evaluate(el => el.height);
+    expect(width).toBeGreaterThan(0);
+    expect(height).toBeGreaterThan(0);
+    // Verify the compass canvas actually renders content (arc calls for the
+    // compass rose / moon direction indicator — presence alone is insufficient).
+    await page.waitForTimeout(300);
+    const arcCount = await page.evaluate(() => window._compassArcCount);
+    expect(arcCount).toBeGreaterThan(0);
   });
 
   test('#live-compass-wrap becomes visible after the user enables the live compass', async ({ page }) => {
@@ -1605,7 +1659,7 @@ test.describe('[FTM-VT-006] Constellation name labels visible', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FTM-VT-008 (UI layer)
 // Requirement: The system shall render daytime animated clouds using the fill
-// color #a8d5a2 (soft sage green).
+// color #FFB347 (soft peach orange / rgba(255,179,71)).
 // ═══════════════════════════════════════════════════════════════════════════════
 test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
   test.beforeEach(async ({ page }) => {
@@ -1618,22 +1672,23 @@ test.describe('[FTM-VT-008] Daytime cloud fill color (UI)', () => {
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
   });
 
-  test('cloud element computed fill color matches #c9b8e8 (lavender)', async ({ page }) => {
-    // Requirement: cloud color is rgba(201, 184, 232, 0.7) — the rgba equivalent of #c9b8e8.
+  test('cloud element computed fill color matches #FFB347 (soft peach orange)', async ({ page }) => {
+    // Requirement (Amendment F / Issue #54): cloud color is rgba(255,179,71,...) — the rgba equivalent of #FFB347.
     // .cloud divs are dynamically created when the day theme is active.
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
+    expect(bgColor).toMatch(/rgba?\(\s*255\s*,\s*179\s*,\s*71/i);
   });
 
-  test('cloud fill color is not the reverted sage green (#a8d5a2)', async ({ page }) => {
+  test('cloud fill color is not the reverted lavender (#c9b8e8 / rgba(201,184,232))', async ({ page }) => {
+    // Amendment F replaced lavender with peach orange; this guards against regression.
     await expect(page.locator('.cloud').first()).toBeAttached({ timeout: 5000 });
     const bgColor = await page.locator('.cloud').first().evaluate(
       el => getComputedStyle(el).backgroundColor
     );
-    expect(bgColor).not.toMatch(/rgba?\(\s*168\s*,\s*213\s*,\s*162/i);
+    expect(bgColor).not.toMatch(/rgba?\(\s*201\s*,\s*184\s*,\s*232/i);
   });
 });
 

@@ -634,3 +634,63 @@ The matrix Notes for FTM-FR-031 describe test scenarios that are not present in 
 3. **[RECOMMENDED] Update the SRS 'Last Updated' field** from March 14, 2026 to March 23, 2026 to match the Amendment E date.
 4. **[RECOMMENDED] Update the traceability matrix 'Generated' date** to match the Amendment E date.
 5. **[RECOMMENDED] Add a human reviewer sign-off** to the security review entry in `docs/security-review.md`.
+
+
+## Quality Review — Issue #54 (Cloud color: lavender → peach orange)
+
+**Date:** 2026-03-23  
+**Reviewer:** Quality Engineering (automated ISO 62304-inspired review)  
+**Branch:** issue-54  
+**SRS Version:** FTM-SRS-001 v1.6  
+**Overall Verdict:** ❌ FAIL — Must resolve before merge
+
+---
+
+### Summary
+
+The primary change (FTM-VT-008 cloud fill color lavender → peach orange / #FFB347) is implemented correctly and completely in all three required locations in `index.html`, with dual-layer test coverage and correct traceability matrix updates. However, this PR bundles **five undeclared scope additions** beyond Issue #54, creating traceability gaps, an unexplained test assertion weakening, and stale documentation defects in test header comments.
+
+---
+
+### Findings
+
+| # | Activity | Severity | Title |
+|---|---|---|---|
+| 1 | Requirements Quality | PASS | FTM-VT-008 requirement updated correctly and unambiguously |
+| 2 | Requirements Quality | WARNING | Security review references undisclosed secondary change (FTM-FR-032 opacity fix) |
+| 3 | Requirements Quality | WARNING | SRS v1.3 history note references lavender as 'initial' color — minor narrative ambiguity |
+| 4 | Code Quality | PASS | Cloud color change minimal, correct, and consistently applied in all three locations |
+| 5 | Code Quality | FAIL | Undeclared secondary code change in applyTheme() (starsCanvas opacity) not traceable to Issue #54 |
+| 6 | Code Quality | WARNING | FTM-FR-011 test assertion weakened (toBeCloseTo → toBeLessThan) with no requirement justification |
+| 7 | Code Quality | WARNING | FTM-FR-043 test substantially expanded with no linked requirement change |
+| 8 | Test Coverage | PASS | FTM-VT-008 has correct dual-layer config + UI test coverage with positive and negative assertions |
+| 9 | Test Coverage | PASS | FTM-FR-033 suite updated in place; no test blocks removed |
+| 10 | Test Coverage | FAIL | Stale section header comment in verification.test.js still references #a8d5a2 (sage green) for FTM-VT-008 |
+| 11 | Test Coverage | FAIL | Stale section header comment in verification.spec.js still references #a8d5a2 (sage green) for FTM-VT-008 |
+| 12 | Test Coverage | FAIL | FTM-SC-001/002/003 TODO comment removal bundled with no linked issue or requirement change |
+| 13 | Traceability | PASS | VTM updated correctly for FTM-VT-008 and FTM-FR-033 |
+| 14 | Traceability | FAIL | FTM-FR-032 opacity fix has no issue number, no requirement amendment, no formal traceability chain |
+| 15 | Traceability | WARNING | VTM FTM-FR-032 notes expanded from two to four tests with no Issue #54 justification |
+| 16 | Traceability | WARNING | FTM-FR-011 test assertion change not reflected in VTM notes |
+| 17 | Process Compliance | FAIL | PR bundles ≥5 undeclared changes beyond Issue #54 scope |
+| 18 | Process Compliance | PASS | Security review completed and addresses primary change adequately |
+| 19 | Process Compliance | WARNING | Security review acknowledges but does not formally flag the opacity fix scope addition |
+| 20 | Process Compliance | PASS | SRS version incremented correctly with complete version history |
+
+---
+
+### Required Actions Before Merge
+
+1. **[FAIL — Code/Traceability]** Open a separate GitHub issue for the `starsCanvas.style.opacity` fix in `applyTheme()`. Link it to FTM-FR-032. Add a requirement amendment or defect closure note to the SRS. Update the VTM FTM-FR-032 entry with the issue reference. Do not merge this fix as part of Issue #54.
+2. **[FAIL — Test Coverage]** Fix the stale section header comment in `verification.test.js` above the `[FTM-VT-008]` describe block: replace `#a8d5a2 (soft sage green)` with `#FFB347 (soft peach orange / rgba(255,179,71))`.
+3. **[FAIL — Test Coverage]** Fix the identical stale section header comment in `verification.spec.js` above the `[FTM-VT-008]` describe block.
+4. **[FAIL — Process]** Either revert the FTM-SC-001/002/003 TODO comment removals (out of scope) or open a separate housekeeping issue and reference it in the commit message.
+5. **[WARNING — Code]** Document or revert the FTM-FR-011 assertion change (`toBeCloseTo` → `toBeLessThan`). If the weaker assertion is intentional, open a separate issue with rationale.
+6. **[WARNING — Code]** Document or revert the FTM-FR-043 test expansion. If the expanded test is intentional, open a separate issue.
+7. **[WARNING — Traceability]** Update VTM FTM-FR-011 notes to reflect the changed assertion if it is retained.
+
+---
+
+### Primary Change Assessment
+
+The Issue #54 primary deliverable (FTM-VT-008 cloud color change) is **correctly implemented** and would be mergeable in isolation. All three color locations in `index.html` are updated, the SRS and VTM are correctly amended, and test coverage is thorough with both positive and negative assertions. The blocking issues are entirely due to bundled out-of-scope changes.
