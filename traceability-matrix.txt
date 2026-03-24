@@ -189,9 +189,12 @@ Req ID      | FTM-FR-032
 Title       | Display star field canvas during nighttime
 Method      | Test
 Test File   | __tests_verify__/verification.spec.js
-Test Suite  | [FTM-FR-032] Stars canvas rendered at night
-Notes       | Two tests: #stars-canvas attached to DOM, canvas width > 0 after
-            | night theme initialisation
+Test Suite  | [FTM-FR-032] Star field and constellation art at night
+Notes       | Four tests: #stars-canvas attached to DOM, canvas width > 0 after
+            | night theme initialisation, body.night class present, constellation
+            | labels drawn via fillText, star canvas opacity 0 and no night class
+            | in daytime theme (defect fix: app now correctly sets opacity:0 on
+            | #stars-canvas when day theme is active)
 
 Req ID      | FTM-FR-033
 Title       | Display cloud layer during daytime
@@ -202,9 +205,8 @@ Notes       | Six tests: body.day class present, cloud count > 0 via querySelect
             | cloud fill color rgba(255,179,71) via getComputedStyle, peach orange color
             | defined in stylesheet, animationName !== 'none', clouds absent at night.
             | Cloud fill color is #FFB347 / rgba(255,179,71) (soft peach orange) per
-            | Amendment F (Issue #54, SRS v1.6). Expected color values updated in
-            | existing test blocks from lavender rgba(201,184,232) to peach orange
-            | rgba(255,179,71); no new test blocks were added.
+            | Amendment F (Issue #54, SRS v1.6). Expected color values reflect
+            | Amendment F; no new test blocks were added.
 
 ================================================================================
  SECTION 5 — FUNCTIONAL REQUIREMENTS: MOBILE COMPASS
@@ -594,12 +596,12 @@ Test File   | __tests_verify__/verification.test.js  (logic/config layer)
 Test Suite  | [FTM-VT-008] Daytime cloud fill color (config)
             | [FTM-VT-008] Daytime cloud fill color (UI)
 Notes       | Config: assert renderClouds() body in index.html contains rgba(255,179,71)
-            | as the cloud fill color and does not contain the reverted lavender
-            | rgba(201,184,232). UI: inspect computed backgroundColor of .cloud element
-            | in day-theme context; assert rgba(255,179,71) present and rgba(201,184,232)
-            | absent. Color is #FFB347 / rgba(255,179,71) (soft peach orange) per
-            | Amendment F (Issue #54, SRS v1.6). Expected values reflect the color
-            | introduced in Amendment F; no new test blocks were added.
+            | as the cloud fill color (soft peach orange / #FFB347, Amendment F, Issue #54,
+            | SRS v1.6) and does not contain the reverted lavender rgba(201,184,232).
+            | UI: inspect computed backgroundColor of .cloud element in day-theme context;
+            | assert rgba(255,179,71) present and rgba(201,184,232) absent.
+            | Expected values updated in-place from lavender rgba(201,184,232) to peach
+            | orange rgba(255,179,71) per Amendment F; no new test blocks were added.
 
 Req ID      | FTM-VT-009
 Title       | Cloud shape and animation unchanged; only fill color changed

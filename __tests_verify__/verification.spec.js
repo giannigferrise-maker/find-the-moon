@@ -449,9 +449,13 @@ test.describe('[FTM-FR-032] Star field and constellation art at night', () => {
   test('star canvas has opacity 0 and body has no "night" class in the daytime theme', async ({ page }) => {
     // Requirement: constellation art is a night-only feature.
     // #stars-canvas uses opacity:0 (not display:none) to hide — check computed opacity.
+    // Defect fix (FTM-FR-032): app was not correctly setting opacity:0 on #stars-canvas
+    // when the day theme was active; this test guards against regression.
     await setupAndEnterZip(page, SUNCALC_DAY);
     await expect(page.locator('body')).toHaveClass(/day/, { timeout: 5000 });
     await expect(page.locator('body')).not.toHaveClass(/night/);
+    // Wait for any CSS transition to settle before checking opacity
+    await page.waitForTimeout(1200);
     const opacity = await page.locator('#stars-canvas').evaluate(
       el => window.getComputedStyle(el).opacity
     );

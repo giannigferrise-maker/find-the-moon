@@ -530,16 +530,16 @@ describe('[FTM-SC-001] SRI integrity attribute present on all external scripts',
   // include a non-empty integrity attribute.
 
   it('finds at least one external script tag in index.html', () => {
-    // TODO: This test verifies the extractor finds the SunCalc CDN tag.
-    //       If the tag is missing entirely the test should fail loudly.
+    // Verifies the extractor finds the SunCalc CDN tag.
+    // If the tag is missing entirely the test should fail loudly.
     const scripts = extractExternalScripts(INDEX_HTML);
     expect(scripts.length).toBeGreaterThan(0);
   });
 
   it('every external script tag has a non-empty integrity attribute', () => {
-    // TODO: For each external <script>, assert that the integrity attribute
-    //       exists and is not an empty string. Fails if the CDN tag was added
-    //       without an integrity value.
+    // For each external <script>, assert that the integrity attribute
+    // exists and is not an empty string. Fails if the CDN tag was added
+    // without an integrity value.
     const scripts = extractExternalScripts(INDEX_HTML);
     for (const script of scripts) {
       expect(script.integrity).toBeTruthy();
@@ -547,8 +547,8 @@ describe('[FTM-SC-001] SRI integrity attribute present on all external scripts',
   });
 
   it('the SunCalc CDN script specifically has an integrity attribute', () => {
-    // TODO: Locate the SunCalc 1.9.0 entry by matching its src URL and
-    //       assert the integrity attribute is present and non-empty.
+    // Locate the SunCalc 1.9.0 entry by matching its src URL and
+    // assert the integrity attribute is present and non-empty.
     const scripts = extractExternalScripts(INDEX_HTML);
     const sunCalc = scripts.find(s =>
       s.src.includes('suncalc') && s.src.includes('1.9.0')
@@ -572,9 +572,9 @@ describe('[FTM-SC-002] SRI hash is a valid SHA-384 or SHA-512 base64 digest', ()
   });
 
   it('the SunCalc SRI value is not a placeholder string', () => {
-    // TODO: Assert the integrity attribute does NOT contain "<hash>" or
-    //       other placeholder tokens that would indicate the developer
-    //       copied the template without filling in the real digest.
+    // Assert the integrity attribute does NOT contain "<hash>" or
+    // other placeholder tokens that would indicate the developer
+    // copied the template without filling in the real digest.
     const scripts = extractExternalScripts(INDEX_HTML);
     const sunCalc = scripts.find(s => s.src.includes('suncalc'));
     expect(sunCalc).toBeDefined();
@@ -604,8 +604,8 @@ describe('[FTM-SC-003] crossorigin attribute present on SRI-protected scripts', 
   // Without crossorigin, browsers refuse SRI checking for cross-origin scripts.
 
   it('every external script with integrity also has crossorigin="anonymous"', () => {
-    // TODO: For each external script whose integrity is non-empty, assert
-    //       that crossorigin equals "anonymous" (case-insensitive).
+    // For each external script whose integrity is non-empty, assert
+    // that crossorigin equals "anonymous" (case-insensitive).
     const scripts = extractExternalScripts(INDEX_HTML);
     for (const script of scripts) {
       if (!script.integrity) continue;
@@ -615,7 +615,7 @@ describe('[FTM-SC-003] crossorigin attribute present on SRI-protected scripts', 
   });
 
   it('the SunCalc CDN script specifically has crossorigin="anonymous"', () => {
-    // TODO: Locate the SunCalc entry and assert crossorigin="anonymous".
+    // Locate the SunCalc entry and assert crossorigin="anonymous".
     const scripts = extractExternalScripts(INDEX_HTML);
     const sunCalc = scripts.find(s => s.src.includes('suncalc'));
     expect(sunCalc).toBeDefined();
