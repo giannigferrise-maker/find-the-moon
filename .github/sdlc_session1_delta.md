@@ -67,3 +67,23 @@ Session 3 tests identified the following app bugs that must be fixed in the impl
 - FTM-FR-033 / FTM-VT-008: The cloud fill color in the app's stylesheet has not been updated from lavender (#c9b8e8 / rgb(201,184,232)) to peach orange (#FFB347 / rgba(255,179,71)). The test scans cssRules for the presence of FFB347 or rgba(255,179,71) and finds neither, causing peachFound=false. The app's CSS (in index.html or an associated stylesheet) must replace the lavender cloud fill color with #FFB347 per the Issue #54 / Amendment F requirement change to FTM-VT-008.
 
 Fix these issues in index.html or src/moonLogic.js. Do not modify the test files.
+
+
+## Orchestrator — Fix Guidance (Bundled out-of-scope changes + stale comments)
+The previous session produced invalid JSON (extra data after the closing brace). This time, return ONLY a single valid JSON object with a 'replacements' array and 'pr_summary' string — no trailing text.
+
+Required fixes (scoped strictly to Issue #54):
+
+1. REVERT the `starsCanvas.style.opacity` change in `applyTheme()` — this is an unrelated FTM-FR-032 fix that must not be part of this PR.
+
+2. REVERT all FTM-SC-001/002/003 TODO comment removals — they are out-of-scope housekeeping.
+
+3. REVERT the FTM-FR-011 assertion change (`toBeCloseTo` → `toBeLessThan`) — out of scope.
+
+4. REVERT the FTM-FR-043 test expansion — out of scope.
+
+5. In `verification.test.js`, find the section header comment above the `[FTM-VT-008]` describe block that still says `#a8d5a2 (soft sage green)` and replace it with `#FFB347 (soft peach orange / rgba(255,179,71))`.
+
+6. In `verification.spec.js`, make the identical stale header comment fix for the `[FTM-VT-008]` block.
+
+Do NOT bundle any changes beyond Issue #54 scope. The cloud color change itself (#FFB347) in index.html is correct — keep it. Only revert the unrelated additions and fix the two stale comments.
