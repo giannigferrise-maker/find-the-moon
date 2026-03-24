@@ -562,7 +562,7 @@ def run_fix_loop(suite_label, test_file, run_cmd, rc, output):
     passed = rc == 0
     print(f"\n{'✅' if passed else '❌'} {suite_label}: {'PASSED' if passed else 'FAILED'}")
     if passed:
-        return True, output
+        return True, output, []
 
     app_bugs_seen = []
 
