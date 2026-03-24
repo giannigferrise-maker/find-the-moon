@@ -3,33 +3,96 @@
   "trigger_label": "3-tests-ready",
   "entry_session": 3,
   "phase": 2,
-  "start_time": "2026-03-24T03:50:43.789988Z",
+  "start_time": "2026-03-24T03:59:30.678015Z",
   "sessions_run": [
     {
       "session": 3,
       "attempt": 1,
       "verdict": "FAIL",
-      "elapsed_seconds": 36,
-      "timestamp": "2026-03-24T03:51:19.819684Z"
+      "elapsed_seconds": 124,
+      "timestamp": "2026-03-24T04:01:35.010626Z"
+    },
+    {
+      "session": 2,
+      "attempt": 2,
+      "verdict": "PASS",
+      "elapsed_seconds": 25,
+      "timestamp": "2026-03-24T04:02:02.487760Z"
     },
     {
       "session": 3,
+      "attempt": 1,
+      "verdict": "PASS",
+      "elapsed_seconds": 150,
+      "timestamp": "2026-03-24T04:04:33.757039Z"
+    },
+    {
+      "session": 4,
+      "attempt": 1,
+      "verdict": "PASS",
+      "elapsed_seconds": 50,
+      "timestamp": "2026-03-24T04:05:25.018126Z"
+    },
+    {
+      "session": 5,
+      "attempt": 1,
+      "verdict": "FAIL",
+      "elapsed_seconds": 116,
+      "timestamp": "2026-03-24T04:07:24.774008Z"
+    },
+    {
+      "session": 2,
+      "attempt": 2,
+      "verdict": "PASS",
+      "elapsed_seconds": 14,
+      "timestamp": "2026-03-24T04:07:53.462958Z"
+    },
+    {
+      "session": 3,
+      "attempt": 1,
+      "verdict": "FAIL",
+      "elapsed_seconds": 163,
+      "timestamp": "2026-03-24T04:10:37.712142Z"
+    },
+    {
+      "session": 2,
       "attempt": 2,
       "verdict": "FAIL",
-      "elapsed_seconds": 38,
-      "timestamp": "2026-03-24T03:51:58.720060Z"
+      "elapsed_seconds": 11,
+      "timestamp": "2026-03-24T04:10:50.675007Z"
     },
     {
-      "session": 3,
+      "session": 2,
       "attempt": 3,
       "verdict": "FAIL",
-      "elapsed_seconds": 107,
-      "timestamp": "2026-03-24T03:53:46.600822Z"
+      "elapsed_seconds": 6,
+      "timestamp": "2026-03-24T04:11:10.797886Z"
     }
   ],
   "retry_counts": {
-    "3": 3
+    "2": 3
   },
-  "fixes_applied": [],
+  "fixes_applied": [
+    {
+      "before_session": 2,
+      "category": "app_bug",
+      "description": "Enriched delta with app bug report: - [FTM-FR-032] star canvas has opacity 0 and body has no 'night' class in the daytime theme: the #stars-canvas element has computed opacity ~0.967 instead of 0 when the daytime theme is active (SUNCAL"
+    },
+    {
+      "before_session": 2,
+      "category": "Bundled out-of-scope changes + stale comments",
+      "description": "The primary Issue #54 change (cloud color to peach orange) is correct. The failures are due to out-of-scope changes bundled into the same PR and stale comments in test files. Perform ALL of the follow"
+    },
+    {
+      "before_session": 2,
+      "category": "app_bug",
+      "description": "Enriched delta with app bug report: - FTM-FR-033 / FTM-VT-008: The cloud fill color in the app's stylesheet has not been updated from lavender (#c9b8e8 / rgb(201,184,232)) to peach orange (#FFB347 / rgba(255,179,71)). The test scans css"
+    },
+    {
+      "before_session": 2,
+      "category": "Bundled out-of-scope changes + stale comments",
+      "description": "The previous session produced invalid JSON (extra data after the closing brace). This time, return ONLY a single valid JSON object with a 'replacements' array and 'pr_summary' string \u2014 no trailing tex"
+    }
+  ],
   "final_verdict": "ESCALATED"
 }
